@@ -9,16 +9,11 @@ func NewROrmer() ROrmer {
 }
 
 func (r *rorm) QueryRanking(key string) RankingQuerySeter {
-	valueCache, ok := rankingRegistry[key]
-	if !ok {
-		panic("query ranking '" + key + "' not registried.")
-	}
-
 	return &rankingQuerySet{
 		querySet: &querySet{
 			rorm: r,
+			key:  key,
 		},
-		valueCache: &valueCache,
 	}
 }
 

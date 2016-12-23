@@ -1,10 +1,15 @@
 package rorm
 
-import "github.com/astaxie/beego"
+import (
+	"time"
+
+	"github.com/astaxie/beego"
+	redis "gopkg.in/redis.v5"
+)
 
 type rankingQuerySet struct {
 	*querySet
-	valueCache           RankingKeyCacher
+	rebuildFunc          func() ([]redis.Z, time.Duration)
 	defaultCountFunc     func() uint
 	defaultIsMembersFunc func() bool
 }
@@ -13,11 +18,7 @@ func (r *rankingQuerySet) Count() uint {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
-	beego.Debug(r.querySet.valueCache)
-	count := qr.ZCardIfExist(r.valueCache.Key())
-	// count := r.rorm.
-	// 	Querier().
-	// 	ZCardIfExist(r.valueCache.Key())
+	count := qr.ZCardIfExist(r.Key())
 	if count >= 0 {
 		return uint(count)
 	}
@@ -36,14 +37,19 @@ func (r *rankingQuerySet) IsMembers(member interface{}) bool {
 	panic("Not imp")
 }
 
-func (r rankingQuerySet) SetDefaultCountFunc(defaultCountFunc func() uint) rankingQuerySet {
+func (r rankingQuerySet) SetDefaultCountFunc(defaultCountFunc func() uint) RankingQuerySeter {
 	r.defaultCountFunc = defaultCountFunc
-	return r
+	return &r
 }
 
-func (r rankingQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func() bool) rankingQuerySet {
+func (r rankingQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func() bool) RankingQuerySeter {
 	r.defaultIsMembersFunc = defaultIsMembersFunc
-	return r
+	return &r
+}
+
+func (r rankingQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) RankingQuerySeter {
+	r.rebuildFunc = rebuildFunc
+	return &r
 }
 
 func (r *rankingQuerySet) callDefaultCountFunc() uint {
@@ -60,20 +66,27 @@ func (r *rankingQuerySet) callDefaultIsMembersFunc() bool {
 	return true
 }
 
+func (r *rankingQuerySet) callRebuildFunc() ([]redis.Z, time.Duration) {
+	if r.rebuildFunc == nil {
+		return []redis.Z{}, -1
+	}
+	return r.rebuildFunc()
+}
+
 func (r *rankingQuerySet) rebuild() bool {
 	// 获取缓存重建锁
-	if r.tryGetRebuildLock(r.valueCache.Key()) {
-		defer r.tryReleaseRebuildLock(r.valueCache.Key())
+	if r.tryGetRebuildLock(r.Key()) {
+		defer r.tryReleaseRebuildLock(r.Key())
 		// 重建缓存
-		beego.Notice("norm.TryRebuildRanking(", r.valueCache.Key(), ")")
-		if members, expire := r.valueCache.RebuildFunc(); len(members) > 0 {
+		beego.Notice("norm.TryRebuildRanking(", r.Key(), ")")
+		if members, expire := r.callRebuildFunc(); len(members) > 0 {
 			// TODO: 临时处理过期时间
-			r.rorm.Querier().ZAddExpire(r.valueCache.Key(), members, expire)
+			r.rorm.Querier().ZAddExpire(r.Key(), members, expire)
 			return true
 		} else {
 			// 失败了，建立缓存保护盾保护DB
 			if r.isProtectDB {
-				r.tryProtectDB(r.valueCache.Key())
+				r.tryProtectDB(r.Key())
 			}
 		}
 	}

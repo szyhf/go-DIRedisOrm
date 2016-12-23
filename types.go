@@ -9,17 +9,14 @@ type ROrmer interface {
 }
 
 type QuerySeter interface {
-}
-
-type RankingQuerySeter interface {
-	Count() uint
-}
-
-type KeyCacher interface {
 	Key() string
 }
 
-type RankingKeyCacher interface {
-	KeyCacher
-	RebuildFunc() (members []redis.Z, expire time.Duration)
+type RankingQuerySeter interface {
+	SetDefaultCountFunc(defaultCountFunc func() uint) RankingQuerySeter
+	SetDefaultIsMembersFunc(defaultIsMembersFunc func() bool) RankingQuerySeter
+	SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) RankingQuerySeter
+
+	IsMembers(member interface{}) bool
+	Count() uint
 }

@@ -6,8 +6,9 @@ import (
 )
 
 type querySet struct {
-	rorm          ROrmer
-	valueCache    KeyCacher
+	rorm ROrmer
+
+	key           string
 	isProtectDB   bool
 	protectExpire time.Duration
 }
@@ -18,6 +19,10 @@ func (this querySet) Protect(expire time.Duration) querySet {
 	this.isProtectDB = true
 	this.protectExpire = expire
 	return this
+}
+
+func (q *querySet) Key() string {
+	return q.key
 }
 
 func (this *querySet) tryGetRebuildLock(key string) bool {
