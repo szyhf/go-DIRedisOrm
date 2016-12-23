@@ -50,7 +50,6 @@ func (r *RedisQuerier) ZCardIfExist(key string) int64 {
 	} else {
 		return -1
 	}
-
 }
 
 func (r *RedisQuerier) ZIsMembers(key string, member string) bool {

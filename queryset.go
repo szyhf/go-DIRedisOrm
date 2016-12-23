@@ -7,7 +7,7 @@ import (
 
 type querySet struct {
 	rorm          ROrmer
-	valueCache    ValueCacher
+	valueCache    KeyCacher
 	isProtectDB   bool
 	protectExpire time.Duration
 }

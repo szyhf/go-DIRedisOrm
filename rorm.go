@@ -13,11 +13,12 @@ func (r *rorm) QueryRanking(key string) RankingQuerySeter {
 	if !ok {
 		panic("query ranking '" + key + "' not registried.")
 	}
+
 	return &rankingQuerySet{
 		querySet: &querySet{
-			rorm:       r,
-			valueCache: &valueCache,
+			rorm: r,
 		},
+		valueCache: &valueCache,
 	}
 }
 

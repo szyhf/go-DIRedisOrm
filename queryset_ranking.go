@@ -4,15 +4,20 @@ import "github.com/astaxie/beego"
 
 type rankingQuerySet struct {
 	*querySet
+	valueCache           RankingKeyCacher
 	defaultCountFunc     func() uint
 	defaultIsMembersFunc func() bool
 }
 
 func (r *rankingQuerySet) Count() uint {
 	// 尝试直接从缓存拿
-	count := r.rorm.
-		Querier().
-		ZCardIfExist(r.valueCache.Key())
+	ro := r.rorm
+	qr := ro.Querier()
+	beego.Debug(r.querySet.valueCache)
+	count := qr.ZCardIfExist(r.valueCache.Key())
+	// count := r.rorm.
+	// 	Querier().
+	// 	ZCardIfExist(r.valueCache.Key())
 	if count >= 0 {
 		return uint(count)
 	}
@@ -61,7 +66,9 @@ func (r *rankingQuerySet) rebuild() bool {
 		defer r.tryReleaseRebuildLock(r.valueCache.Key())
 		// 重建缓存
 		beego.Notice("norm.TryRebuildRanking(", r.valueCache.Key(), ")")
-		if r.valueCache.RebuildFunc() {
+		if members, expire := r.valueCache.RebuildFunc(); len(members) > 0 {
+			// TODO: 临时处理过期时间
+			r.rorm.Querier().ZAddExpire(r.valueCache.Key(), members, expire)
 			return true
 		} else {
 			// 失败了，建立缓存保护盾保护DB
