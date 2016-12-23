@@ -4,7 +4,7 @@ type rorm struct {
 	redisQuerier *RedisQuerier
 }
 
-func NewROrmer() ROrmer {
+func NewROrm() ROrmer {
 	return new(rorm).Using("default")
 }
 
