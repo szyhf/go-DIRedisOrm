@@ -12,17 +12,12 @@ import (
 // 使用pipline实现的带过期时间的ZAdd
 func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Duration) bool {
 	beego.Warn("[Redis ZAddExpire]", key, members, expire)
-	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+	_, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.ZAdd(key, members...)
 		pipe.Expire(key, expire)
 		return nil
 	})
 	if err != nil {
-		for _, cmd := range cmds {
-			if cmd.Err() != nil {
-				beego.Warn("norm.ZAddExpire(", key, ") failed:", cmd.Err())
-			}
-		}
 		return false
 	}
 	return true
@@ -38,12 +33,7 @@ func (r *RedisQuerier) ZCardIfExist(key string) (int64, error) {
 		return nil
 	})
 	if err != nil {
-		for _, cmd := range cmds {
-			if cmd.Err() != nil {
-				beego.Warn("norm.ZCardIfExist(", key, ") failed:", cmd.Err())
-				return 0, cmd.Err()
-			}
-		}
+		return 0, err
 	}
 	if cmds[0].(*redis.BoolCmd).Val() {
 		return cmds[1].(*redis.IntCmd).Val(), nil
@@ -52,20 +42,34 @@ func (r *RedisQuerier) ZCardIfExist(key string) (int64, error) {
 	}
 }
 
+// 判定Key是否存在，如果存在则返回指定排序区间的成员（正序）
+func (r *RedisQuerier) ZRangeIfExist(key string, start, stop int64) ([]string, error) {
+	beego.Warn("[Redis ZRangeIfExist]", key)
+	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.Exists(key)
+		pipe.ZRange(key, start, stop)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if cmds[0].(*redis.BoolCmd).Val() {
+		return cmds[1].(*redis.StringSliceCmd).Val(), nil
+	} else {
+		return nil, ErrorKeyNotExist
+	}
+}
+
+// 判定Key是否存在，如果存在则返回指定排序区间的成员（逆序）
 func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string, error) {
-	beego.Warn("[Redis ZRangeRevIfExist]", key)
+	beego.Warn("[Redis ZRangeIfExist]", key)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.ZRevRange(key, start, stop)
 		return nil
 	})
 	if err != nil {
-		for _, cmd := range cmds {
-			if cmd.Err() != nil {
-				beego.Warn("norm.ZRevRangeIfExist(", key, ") failed:", cmd.Err())
-				return nil, cmd.Err()
-			}
-		}
+		return nil, err
 	}
 	if cmds[0].(*redis.BoolCmd).Val() {
 		return cmds[1].(*redis.StringSliceCmd).Val(), nil

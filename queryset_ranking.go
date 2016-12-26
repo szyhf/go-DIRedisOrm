@@ -43,7 +43,21 @@ func (r *rankingQuerySet) IsMembers(member interface{}) bool {
 }
 
 func (r rankingQuerySet) RangeASC(start, stop int64) []string {
-	panic("Not imp")
+	// 尝试直接从缓存拿
+	ro := r.rorm
+	qr := ro.Querier()
+	members, err := qr.ZRangeIfExist(r.Key(), start, stop)
+	if err == nil {
+		return members
+	}
+
+	// 缓存获取失败尝试重构缓存
+	if r.rebuild() {
+		return r.RangeASC(start, stop)
+	}
+
+	// 使用用户的默认设置
+	return r.defaultRangeASCFunc(start, stop)
 }
 
 func (r rankingQuerySet) RangeDESC(start, stop int64) []string {
