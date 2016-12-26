@@ -71,6 +71,8 @@ qs = qs.SetRebuildFunc(func() ([]redis.Z, time.Duration) {
 
 ```
 
+1. RebuildFunc会在key不存在的时候被调用，用于重构缓存，如果不设置则会跳过重构的过程。
+
 ### Ranking.RangeASC(start,stop int64)[]string
 
 根据正序，获取指定索引区间内的成员。
@@ -83,6 +85,8 @@ qs = qs.SetDefaultRangeASCFunc(
 			}).
 memberInRange := qs.RangeASC(start,stop)
 ```
+
+1. DefaultRangeASCFunc会在无法重构缓存的时候被调用，如果不设置则返回[]string{}。
 
 ### Ranking.RangeDESC(start,stop int64)[]string
 
@@ -97,6 +101,8 @@ qs = qs.SetDefaultRangeDESCFunc(
 memberInRange := qs.RangeDESC(start,stop)
 ```
 
+1. DefaultRangeDESCFunc会在无法重构缓存的时候被调用，如果不设置则返回[]string{}。
+
 ### Ranking.IsMembers(member string)
 
 判断member是否在当前集合中。
@@ -110,6 +116,8 @@ qs := SetDefaultIsMembersFunc(
 
 isMembers := qs.IsMembers("MEMBER")
 ```
+
+1. DefaultIsMembers会在无法重构缓存的时候被调用，如果不设置则返回false。
 
 ### Ranking.Count()
 
@@ -127,7 +135,6 @@ count := qs.Count()
 ```
 
 1. DefaultCountFunc会在无法重构缓存的时候被调用，如果不设置则返回0。
-1. RebuildFunc会在key不存在的时候被调用，用于重构缓存，如果不设置则会跳过重构的过程。
 
 # 关于日志：
 
