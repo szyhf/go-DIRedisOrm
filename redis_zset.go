@@ -12,20 +12,15 @@ import (
 )
 
 // 使用pipline实现的带过期时间的ZAdd
-func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Duration) bool {
+func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Duration) error {
 	beego.Warn("[Redis ZAddExpire]", key, members, expire)
 	_, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.ZAdd(key, members...)
 		pipe.Expire(key, expire)
 		return nil
 	})
-	if len(members) == 0 {
-		beego.Error(key)
-	}
-	if err != nil {
-		return false
-	}
-	return true
+
+	return err
 }
 
 // 使用Pipline实现的优先检查存在性的ZCard
