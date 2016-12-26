@@ -14,6 +14,7 @@ var (
 
 type ROrmer interface {
 	QueryZSet(key string) ZSetQuerySeter
+	QuerySet(key string) SetQuerySeter
 	Using(alias string) ROrmer
 	Querier() *RedisQuerier
 }
@@ -55,6 +56,12 @@ type ZSetQuerySeter interface {
 }
 
 type SetQuerySeter interface {
+	Protect(expire time.Duration) SetQuerySeter
+	SetRebuildFunc(rebuildFunc func() ([]interface{}, time.Duration)) SetQuerySeter
+	SetDefaultMembersFunc(defaultMembersFunc func() []string) SetQuerySeter
+
+	Count() int64
+	Members() []string
 }
 
 type Querier interface {
