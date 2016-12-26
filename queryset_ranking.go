@@ -47,9 +47,8 @@ func (r *rankingQuerySet) IsMembers(member string) bool {
 	exist, err := qr.ZIsMembers(r.Key(), member)
 	if err == nil {
 		return exist
-	} else {
-		beego.Error(err)
 	}
+
 	// 重建缓存
 	if r.rebuild() {
 		return r.IsMembers(member)
@@ -205,7 +204,6 @@ func (r *rankingQuerySet) rebuild() bool {
 			return true
 		} else {
 			// 失败了，建立缓存保护盾保护DB
-			beego.Error("Try protect", r.isProtectDB)
 			if r.isProtectDB {
 				r.tryProtectDB(r.Key())
 			}
