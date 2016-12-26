@@ -19,6 +19,8 @@ type rankingQuerySet struct {
 	isRebuilding bool
 }
 
+// ========= 查询接口 =========
+
 func (r *rankingQuerySet) Count() uint {
 	// 尝试直接从缓存拿
 	ro := r.rorm
@@ -57,7 +59,7 @@ func (r *rankingQuerySet) IsMembers(member string) bool {
 	return r.callDefaultIsMembersFunc(member)
 }
 
-func (r rankingQuerySet) RangeASC(start, stop int64) []string {
+func (r *rankingQuerySet) RangeASC(start, stop int64) []string {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
@@ -75,7 +77,7 @@ func (r rankingQuerySet) RangeASC(start, stop int64) []string {
 	return r.defaultRangeASCFunc(start, stop)
 }
 
-func (r rankingQuerySet) RangeDESC(start, stop int64) []string {
+func (r *rankingQuerySet) RangeDESC(start, stop int64) []string {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
