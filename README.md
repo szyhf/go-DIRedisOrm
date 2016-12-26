@@ -39,7 +39,7 @@ qs = qs.Protect(180*time.Second)
 # 更多文档参考wiki目录
 
 1. [Main.md](./wiki/1.Main.md)
-2. [Ranking.md](./wiki/2.Ranking.md)
+2. [ZSet.md](./wiki/2.ZSet.md)
 
 # 关于日志：
 

@@ -13,7 +13,7 @@ import (
 
 // 使用pipline实现的带过期时间的ZAdd
 func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Duration) error {
-	beego.Warn("[Redis ZAddExpire]", key, members, expire)
+	beego.Notice("[Redis ZAddExpire]", key, members, expire)
 	_, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.ZAdd(key, members...)
 		pipe.Expire(key, expire)
@@ -24,9 +24,8 @@ func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Dur
 }
 
 // 使用Pipline实现的优先检查存在性的ZCard
-// 如果return -1表示查询失败。
 func (r *RedisQuerier) ZCardIfExist(key string) (int64, error) {
-	beego.Warn("[Redis ZCardIfExist]", key)
+	beego.Notice("[Redis ZCardIfExist]", key)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.ZCard(key)
@@ -44,7 +43,7 @@ func (r *RedisQuerier) ZCardIfExist(key string) (int64, error) {
 
 // 判定Key是否存在，如果存在则返回指定排序区间的成员（正序）
 func (r *RedisQuerier) ZRangeIfExist(key string, start, stop int64) ([]string, error) {
-	beego.Warn("[Redis ZRangeIfExist]", key)
+	beego.Notice("[Redis ZRangeIfExist]", key)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.ZRange(key, start, stop)
@@ -69,7 +68,7 @@ func (r *RedisQuerier) ZRangeIfExist(key string, start, stop int64) ([]string, e
 
 // 判定Key是否存在，如果存在则返回指定排序区间的成员（逆序）
 func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string, error) {
-	beego.Warn("[Redis ZRevRangeIfExist]", key)
+	beego.Notice("[Redis ZRevRangeIfExist]", key)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.ZRevRange(key, start, stop)
@@ -92,8 +91,9 @@ func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string
 	}
 }
 
+// 判定Key是否存在，如果存在则检查member是否在集合中
 func (r *RedisQuerier) ZIsMembers(key string, member string) (bool, error) {
-	beego.Warn("[Redis ZIsMembers]", key)
+	beego.Notice("[Redis ZIsMembers]", key)
 	// 通过ZRank间接实现存在性判断
 	// ZScore返回member在ZSet中的Index
 	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
@@ -132,43 +132,43 @@ func (r *RedisQuerier) ZIsMembers(key string, member string) (bool, error) {
 // 添加时可以指定多个分数/成员（score/member）对。
 // 如果指定添加的成员已经是有序集合里面的成员，则会更新改成员的分数（scrore）并更新到正确的排序位置。
 func (r *RedisQuerier) ZAdd(key string, members ...redis.Z) *redis.IntCmd {
-	beego.Warn("[Redis ZAdd]", key, members)
+	beego.Notice("[Redis ZAdd]", key, members)
 	return r.Client.ZAdd(key, members...)
 }
 
 // 返回key的有序集元素个数。
 func (r *RedisQuerier) ZCard(key string) *redis.IntCmd {
-	beego.Warn("[Redis ZCard]", key)
+	beego.Notice("[Redis ZCard]", key)
 	return r.Client.ZCard(key)
 }
 
 // 返回有序集key中，score值在min和max之间(默认包括score值等于min或max)的成员。
 func (r *RedisQuerier) ZCount(key string, min int, max int) *redis.IntCmd {
-	beego.Warn("[Redis Count]", key, min, max)
+	beego.Notice("[Redis Count]", key, min, max)
 	return r.Client.ZCount(key, fmt.Sprintf("%d", min), fmt.Sprintf("%d", max))
 }
 
 // 从ZSet中删除一个或多个成员
 func (r *RedisQuerier) ZRem(key string, members ...interface{}) *redis.IntCmd {
-	beego.Warn("[Redis ZRem]", key, members)
+	beego.Notice("[Redis ZRem]", key, members)
 	return r.Client.ZRem(key, members...)
 }
 
 // 返回有序集key中，指定区间内的成员。其中成员的位置按score值递减(从大到小)来排列。具有相同score值的成员按字典序排列。
 func (r *RedisQuerier) ZRange(key string, start int64, stop int64) *redis.StringSliceCmd {
-	beego.Warn("[Redis ZRange]", key, start, stop)
+	beego.Notice("[Redis ZRange]", key, start, stop)
 	return r.Client.ZRange(key, start, stop)
 }
 
 // 返回有序集key中，指定区间内的成员。其中成员的位置按score值递减(从大到小)来排列。具有相同score值的成员按字典序的反序排列。
 func (r *RedisQuerier) ZRevRange(key string, start int64, stop int64) *redis.StringSliceCmd {
-	beego.Warn("[Redis ZRevRange]", key, start, stop)
+	beego.Notice("[Redis ZRevRange]", key, start, stop)
 	return r.Client.ZRevRange(key, start, stop)
 }
 
 // 返回有序集key中，成员member的score值。
 // 如果member元素不是有序集key的成员，或key不存在，返回nil。
 func (r *RedisQuerier) ZScore(key, member string) *redis.FloatCmd {
-	beego.Warn("[Redis ZScore]", key, member)
+	beego.Notice("[Redis ZScore]", key, member)
 	return r.Client.ZScore(key, member)
 }

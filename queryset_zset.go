@@ -7,7 +7,7 @@ import (
 	redis "gopkg.in/redis.v5"
 )
 
-type rankingQuerySet struct {
+type zsetQuerySet struct {
 	*querySet
 	rebuildFunc          func() ([]redis.Z, time.Duration)
 	defaultCountFunc     func() uint
@@ -21,7 +21,7 @@ type rankingQuerySet struct {
 
 // ========= 查询接口 =========
 
-func (r *rankingQuerySet) Count() uint {
+func (r *zsetQuerySet) Count() uint {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
@@ -40,7 +40,7 @@ func (r *rankingQuerySet) Count() uint {
 	return r.callDefaultCountFunc()
 }
 
-func (r *rankingQuerySet) IsMembers(member string) bool {
+func (r *zsetQuerySet) IsMembers(member string) bool {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
@@ -58,7 +58,7 @@ func (r *rankingQuerySet) IsMembers(member string) bool {
 	return r.callDefaultIsMembersFunc(member)
 }
 
-func (r *rankingQuerySet) RangeASC(start, stop int64) []string {
+func (r *zsetQuerySet) RangeASC(start, stop int64) []string {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
@@ -76,7 +76,7 @@ func (r *rankingQuerySet) RangeASC(start, stop int64) []string {
 	return r.defaultRangeASCFunc(start, stop)
 }
 
-func (r *rankingQuerySet) RangeDESC(start, stop int64) []string {
+func (r *zsetQuerySet) RangeDESC(start, stop int64) []string {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
@@ -96,7 +96,7 @@ func (r *rankingQuerySet) RangeDESC(start, stop int64) []string {
 
 // ========= 写入接口 =========
 
-func (r *rankingQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) error {
+func (r *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) error {
 	ro := r.rorm
 	qr := ro.Querier()
 	// 如果不增加过期方法，可能会创建一个不会过期的集合
@@ -108,7 +108,7 @@ func (r *rankingQuerySet) AddExpire(member interface{}, score float64, expire ti
 	return nil
 }
 
-func (r *rankingQuerySet) Rem(member ...interface{}) error {
+func (r *zsetQuerySet) Rem(member ...interface{}) error {
 	ro := r.rorm
 	qr := ro.Querier()
 	qr.ZRem(r.Key(), member...)
@@ -119,75 +119,75 @@ func (r *rankingQuerySet) Rem(member ...interface{}) error {
 
 // 防止频繁重建
 // expire 保护有效时间
-func (r rankingQuerySet) Protect(expire time.Duration) RankingQuerySeter {
+func (r zsetQuerySet) Protect(expire time.Duration) ZSetQuerySeter {
 	r.isProtectDB = true
 	r.protectExpire = expire
 	return &r
 }
 
-func (r rankingQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) RankingQuerySeter {
+func (r zsetQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) ZSetQuerySeter {
 	r.rebuildFunc = rebuildFunc
 	return &r
 }
 
-func (r rankingQuerySet) SetDefaultCountFunc(defaultCountFunc func() uint) RankingQuerySeter {
+func (r zsetQuerySet) SetDefaultCountFunc(defaultCountFunc func() uint) ZSetQuerySeter {
 	r.defaultCountFunc = defaultCountFunc
 	return &r
 }
 
-func (r rankingQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) RankingQuerySeter {
+func (r zsetQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) ZSetQuerySeter {
 	r.defaultIsMembersFunc = defaultIsMembersFunc
 	return &r
 }
 
 // 默认获取ZSet成员的方法
-func (r rankingQuerySet) SetDefaultRangeASCFunc(defaultRangeASCFunc func(start, stop int64) []string) RankingQuerySeter {
+func (r zsetQuerySet) SetDefaultRangeASCFunc(defaultRangeASCFunc func(start, stop int64) []string) ZSetQuerySeter {
 	r.defaultRangeASCFunc = defaultRangeASCFunc
 	return &r
 }
 
 // 默认获取ZSet成员的方法
-func (r rankingQuerySet) SetDefaultRangeDESCFunc(defaultRangeDESCFunc func(start, stop int64) []string) RankingQuerySeter {
+func (r zsetQuerySet) SetDefaultRangeDESCFunc(defaultRangeDESCFunc func(start, stop int64) []string) ZSetQuerySeter {
 	r.defaultRangeDESCFunc = defaultRangeDESCFunc
 	return &r
 }
 
-func (r *rankingQuerySet) callDefaultCountFunc() uint {
+func (r *zsetQuerySet) callDefaultCountFunc() uint {
 	if r.defaultCountFunc == nil {
 		return 0
 	}
 	return r.defaultCountFunc()
 }
 
-func (r *rankingQuerySet) callDefaultIsMembersFunc(member string) bool {
+func (r *zsetQuerySet) callDefaultIsMembersFunc(member string) bool {
 	if r.defaultIsMembersFunc == nil {
 		return false
 	}
 	return r.defaultIsMembersFunc(member)
 }
 
-func (r *rankingQuerySet) callDefaultRangeASCFunc(start, stop int64) []string {
+func (r *zsetQuerySet) callDefaultRangeASCFunc(start, stop int64) []string {
 	if r.defaultRangeASCFunc == nil {
 		return []string{}
 	}
 	return r.defaultRangeASCFunc(start, stop)
 }
 
-func (r *rankingQuerySet) callDefaultRangeDESCFunc(start, stop int64) []string {
+func (r *zsetQuerySet) callDefaultRangeDESCFunc(start, stop int64) []string {
 	if r.defaultRangeDESCFunc == nil {
 		return []string{}
 	}
 	return r.defaultRangeDESCFunc(start, stop)
 }
 
-func (r *rankingQuerySet) callRebuildFunc() ([]redis.Z, time.Duration) {
+func (r *zsetQuerySet) callRebuildFunc() ([]redis.Z, time.Duration) {
 	if r.rebuildFunc == nil {
 		return []redis.Z{}, -1
 	}
 	return r.rebuildFunc()
 }
 
-func (r *rankingQuerySet) rebuild() bool {
+func (r *zsetQuerySet) rebuild() bool {
 	if r.isRebuilding {
 		// 防止重构缓存失败陷入死循环
 		return false
@@ -198,7 +198,7 @@ func (r *rankingQuerySet) rebuild() bool {
 	if r.tryGetRebuildLock(r.Key()) {
 		defer r.tryReleaseRebuildLock(r.Key())
 		// 重建缓存
-		beego.Notice("norm.TryRebuildRanking(", r.Key(), ")")
+		beego.Notice("norm.TryRebuildZSet(", r.Key(), ")")
 		if members, expire := r.callRebuildFunc(); len(members) > 0 {
 			r.rorm.Querier().ZAddExpire(r.Key(), members, expire)
 			return true

@@ -8,14 +8,18 @@ func NewROrm() ROrmer {
 	return new(rorm).Using("default")
 }
 
-func (r *rorm) QueryRanking(key string) RankingQuerySeter {
-	return &rankingQuerySet{
+func (r *rorm) QueryZSet(key string) ZSetQuerySeter {
+	return &zsetQuerySet{
 		querySet: &querySet{
 			rorm: r,
 			key:  key,
 		},
 	}
 }
+
+// func(r*rorm)QuseySet(key string)SetQuerySeter{
+// 	return &
+// }
 
 func (r rorm) Using(alias string) ROrmer {
 	client, ok := redisRegistry[alias]

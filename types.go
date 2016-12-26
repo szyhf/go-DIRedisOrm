@@ -13,7 +13,7 @@ var (
 )
 
 type ROrmer interface {
-	QueryRanking(key string) RankingQuerySeter
+	QueryZSet(key string) ZSetQuerySeter
 	Using(alias string) ROrmer
 	Querier() *RedisQuerier
 }
@@ -22,20 +22,20 @@ type QuerySeter interface {
 	Key() string
 }
 
-type RankingQuerySeter interface {
+type ZSetQuerySeter interface {
 	// ========= 连贯操作接口 =========
 	// 保护数据库
-	Protect(expire time.Duration) RankingQuerySeter
+	Protect(expire time.Duration) ZSetQuerySeter
 	// 重构ZSet的方法
-	SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) RankingQuerySeter
+	SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) ZSetQuerySeter
 	// 默认获取ZSet数量的方法
-	SetDefaultCountFunc(defaultCountFunc func() uint) RankingQuerySeter
+	SetDefaultCountFunc(defaultCountFunc func() uint) ZSetQuerySeter
 	// 默认判断目标是否ZSet成员的方法
-	SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) RankingQuerySeter
+	SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) ZSetQuerySeter
 	// 默认获取ZSet某区段成员的方法
-	SetDefaultRangeASCFunc(defaultRangeASC func(start, stop int64) []string) RankingQuerySeter
+	SetDefaultRangeASCFunc(defaultRangeASC func(start, stop int64) []string) ZSetQuerySeter
 	// 默认获取ZSet某区段成员的方法
-	SetDefaultRangeDESCFunc(defaultRangeDESC func(start, stop int64) []string) RankingQuerySeter
+	SetDefaultRangeDESCFunc(defaultRangeDESC func(start, stop int64) []string) ZSetQuerySeter
 
 	// ========= 查询接口 =========
 	// 获取成员数量
@@ -54,9 +54,12 @@ type RankingQuerySeter interface {
 	Rem(member ...interface{}) error
 }
 
+type SetQuerySeter interface {
+}
+
 type Querier interface {
 	redis.Cmdable
-	ZAddExpire(key string, members []redis.Z, expire time.Duration) bool
-	ZCardIfExist(key string) int64
-	ZIsMembers(key string, member string) bool
+	ZAddExpire(key string, members []redis.Z, expire time.Duration) error
+	ZCardIfExist(key string) (int64, error)
+	ZIsMembers(key string, member string) (bool, error)
 }
