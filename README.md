@@ -24,18 +24,27 @@ rorm.RegistryRedisClient("default", RedisClient)
 
 根据现在遇到的情况一点点处理吧。
 
-## 结构：Ranking
+## 接口：QuerySet
 
+最基础的QuerySet接口，提供一些基础方法。
+
+```
+// 缓存穿透保护（连贯操作）
+// 表示对本次查询的key做180s的缓存穿透保护
+qs = qs.Protect(180*time.Second)
+```
+
+## 接口：RankingQuerySet
+
+QuerySet的Ranking扩展版，支持QuerySet的所有方法。
 对ZSet的封装，主要解决有排序需求的排行榜问题。
 
-### Ranking.Count()
-
-统计Ranking中总共有多少元素。
-
-```golang
+### 基础调用
+```
 // 注册过程略
 ROrmHandler = rorm.NewROrm()
-// 采用链式操作，SetXXX方法都是可选的
+
+// 生成RankingQuerySet
 qs := ROrmHandler.QueryRanking("Key to your ZSet").
 
 // 设置如果缓存不存在，重构缓存的方法（可选）
@@ -56,13 +65,62 @@ qs = qs.SetRebuildFunc(func() ([]redis.Z, time.Duration) {
 			return members, 30 *time.Seconds
 		})
 
+
+```
+
+### Ranking.RangeASC(start,stop int64)[]string
+
+根据正序，获取指定索引区间内的成员。
+
+```
+// 如果重构缓存失败，默认获取指定区间成员的方法（可选）
+qs = qs.SetDefaultRangeASCFunc(
+			func(start, stop int64) []string {
+				return DB("XX").MustStringArray()
+			}).
+memberInRange := qs.RangeASC(start,stop)
+```
+
+### Ranking.RangeDESC(start,stop int64)[]string
+
+根据正序，获取指定索引区间内的成员。
+
+```
+// 如果重构缓存失败，默认获取指定区间成员的方法（可选）
+qs = qs.SetDefaultRangeDESCFunc(
+			func(start, stop int64) []string {
+				return DB("XX").OrderByDECS("ID").MustStringArray()
+			}).
+memberInRange := qs.RangeDESC(start,stop)
+```
+
+### Ranking.IsMembers(member string)
+
+判断member是否在当前集合中。
+
+```
+// 设置如果重构缓存失败，判断member是否在当前集合中（可选）
+qs := SetDefaultIsMembersFunc(
+			func(member string) bool {
+				return DB("XX").Exist()
+			})
+
+isMembers := qs.IsMembers("MEMBER")
+```
+
+### Ranking.Count()
+
+统计Ranking中总共有多少元素。
+
+```golang
 // 设置如果重构缓存失败，获取默认数量的方法（可选）
 qs = qs.SetDefaultCountFunc(func() uint {
 			// 可以根据自己的业务情况实现，例如从数据库中读一下数据
 			return 0
 		})
 
-count = qs.Count()
+// 获取Ranking中元素的数量
+count := qs.Count()
 ```
 
 1. DefaultCountFunc会在无法重构缓存的时候被调用，如果不设置则返回0。
