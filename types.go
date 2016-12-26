@@ -28,6 +28,7 @@ type RankingQuerySeter interface {
 
 	// 默认获取ZSet数量的方法
 	SetDefaultCountFunc(defaultCountFunc func() uint) RankingQuerySeter
+
 	// 默认判断目标是否ZSet成员的方法
 	SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) RankingQuerySeter
 
@@ -43,7 +44,7 @@ type RankingQuerySeter interface {
 	// 按分数降序获取排名第start到stop的所有成员
 	RangeDESC(start, stop int64) []string
 	// 判断目标成员是否是榜单的成员（按value判断）
-	IsMembers(member interface{}) bool
+	IsMembers(member string) bool
 }
 
 type Querier interface {

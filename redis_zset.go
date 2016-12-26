@@ -62,7 +62,7 @@ func (r *RedisQuerier) ZRangeIfExist(key string, start, stop int64) ([]string, e
 
 // 判定Key是否存在，如果存在则返回指定排序区间的成员（逆序）
 func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string, error) {
-	beego.Warn("[Redis ZRangeIfExist]", key)
+	beego.Warn("[Redis ZRevRangeIfExist]", key)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.ZRevRange(key, start, stop)
@@ -78,9 +78,35 @@ func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string
 	}
 }
 
-func (r *RedisQuerier) ZIsMembers(key string, member string) bool {
-	floatCmd := r.ZScore(key, member)
-	return floatCmd.Err() == nil
+func (r *RedisQuerier) ZIsMembers(key string, member string) (bool, error) {
+	beego.Warn("[Redis ZRangeIfExist]", key)
+	// 通过ZRank间接实现存在性判断
+	// ZRank返回member在ZSet中的Index
+	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.Exists(key)
+		pipe.ZRank(key, member)
+		return nil
+	})
+
+	// Pipeline默认返回的是最后一个err，所以这里的判定方式要做调整
+	if cmds[0].Err() != nil {
+		return false, cmds[0].Err()
+	}
+	if cmds[0].(*redis.BoolCmd).Val() {
+		// 如果member不存在，则会返回error=redis.Nil
+		if cmds[1].Err() == nil {
+			// member存在
+			return true, nil
+		} else if cmds[1].Err() == redis.Nil {
+			// member不存在，虽然有err但属于正常情况
+			return false, nil
+		} else {
+			// err!=redis.Nil，说明是其他异常，要返回异常
+			return false, cmds[1].Err()
+		}
+	} else {
+		return false, ErrorKeyNotExist
+	}
 }
 
 // ======= 原生命令 =======

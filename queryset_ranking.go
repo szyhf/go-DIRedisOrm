@@ -38,8 +38,21 @@ func (r *rankingQuerySet) Count() uint {
 	return r.callDefaultCountFunc()
 }
 
-func (r *rankingQuerySet) IsMembers(member interface{}) bool {
-	panic("Not imp")
+func (r *rankingQuerySet) IsMembers(member string) bool {
+	// 尝试直接从缓存拿
+	ro := r.rorm
+	qr := ro.Querier()
+	exist, err := qr.ZIsMembers(r.Key(), member)
+	if err == nil {
+		return exist
+	}
+	// 重建缓存
+	if r.rebuild() {
+		return r.IsMembers(member)
+	}
+
+	// 从用户提供的默认方法获取
+	return r.callDefaultIsMembersFunc(member)
 }
 
 func (r rankingQuerySet) RangeASC(start, stop int64) []string {
@@ -114,11 +127,11 @@ func (r *rankingQuerySet) callDefaultCountFunc() uint {
 	return r.defaultCountFunc()
 }
 
-func (r *rankingQuerySet) callDefaultIsMembersFunc() bool {
+func (r *rankingQuerySet) callDefaultIsMembersFunc(member string) bool {
 	if r.defaultIsMembersFunc == nil {
 		return false
 	}
-	panic("Not imp")
+	return r.defaultIsMembersFunc(member)
 }
 
 func (r *rankingQuerySet) callDefaultRangeASCFunc(start, stop int64) []string {
