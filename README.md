@@ -36,105 +36,10 @@ rorm.RegistryRedisClient("default", RedisClient)
 qs = qs.Protect(180*time.Second)
 ```
 
-## 接口：RankingQuerySet
+# 更多文档参考wiki目录
 
-QuerySet的Ranking扩展版，支持QuerySet的所有方法。
-对ZSet的封装，主要解决有排序需求的排行榜问题。
-
-### 基础调用
-
-```golang
-// 注册过程略
-ROrmHandler = rorm.NewROrm()
-
-// 生成RankingQuerySet
-qs := ROrmHandler.QueryRanking("Key to your ZSet").
-
-// 设置如果缓存不存在，重构缓存的方法（可选）
-qs = qs.SetRebuildFunc(func() ([]redis.Z, time.Duration) {
-			// 从DB读取数据(根据自己的业务情况)
-			ary := FromDB()
-
-			// 生成ZSet成员
-			members := make([]redis.Z, len(ary))
-			for i, v := range ary {
-				members[i] = redis.Z{
-					Score:  v.Score,
-					Member: v.Name,
-				}
-			}
-
-			// 要写入ZSet的成员及该key过期的时间
-			return members, 30 *time.Seconds
-		})
-
-
-```
-
-1. RebuildFunc会在key不存在的时候被调用，用于重构缓存，如果不设置则会跳过重构的过程。
-
-### Ranking.RangeASC(start,stop int64)[]string
-
-根据正序，获取指定索引区间内的成员。
-
-```golang
-// 如果重构缓存失败，默认获取指定区间成员的方法（可选）
-qs = qs.SetDefaultRangeASCFunc(
-			func(start, stop int64) []string {
-				return DB("XX").MustStringArray()
-			}).
-memberInRange := qs.RangeASC(start,stop)
-```
-
-1. DefaultRangeASCFunc会在无法重构缓存的时候被调用，如果不设置则返回[]string{}。
-
-### Ranking.RangeDESC(start,stop int64)[]string
-
-根据正序，获取指定索引区间内的成员。
-
-```golang
-// 如果重构缓存失败，默认获取指定区间成员的方法（可选）
-qs = qs.SetDefaultRangeDESCFunc(
-			func(start, stop int64) []string {
-				return DB("XX").OrderByDECS("ID").MustStringArray()
-			}).
-memberInRange := qs.RangeDESC(start,stop)
-```
-
-1. DefaultRangeDESCFunc会在无法重构缓存的时候被调用，如果不设置则返回[]string{}。
-
-### Ranking.IsMembers(member string)
-
-判断member是否在当前集合中。
-
-```golang
-// 设置如果重构缓存失败，判断member是否在当前集合中（可选）
-qs := SetDefaultIsMembersFunc(
-			func(member string) bool {
-				return DB("XX").Exist()
-			})
-
-isMembers := qs.IsMembers("MEMBER")
-```
-
-1. DefaultIsMembers会在无法重构缓存的时候被调用，如果不设置则返回false。
-
-### Ranking.Count()
-
-统计Ranking中总共有多少元素。
-
-```golang
-// 设置如果重构缓存失败，获取默认数量的方法（可选）
-qs = qs.SetDefaultCountFunc(func() uint {
-			// 可以根据自己的业务情况实现，例如从数据库中读一下数据
-			return 0
-		})
-
-// 获取Ranking中元素的数量
-count := qs.Count()
-```
-
-1. DefaultCountFunc会在无法重构缓存的时候被调用，如果不设置则返回0。
+1. [Main.md](./wiki/1.Main.md)
+2. [Ranking.md](./wiki/2.Ranking.md)
 
 # 关于日志：
 
