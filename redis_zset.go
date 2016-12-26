@@ -98,12 +98,12 @@ func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string
 }
 
 func (r *RedisQuerier) ZIsMembers(key string, member string) (bool, error) {
-	beego.Warn("[Redis ZRangeIfExist]", key)
+	beego.Warn("[Redis ZIsMembers]", key)
 	// 通过ZRank间接实现存在性判断
-	// ZRank返回member在ZSet中的Index
+	// ZScore返回member在ZSet中的Index
 	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
-		pipe.ZRank(key, member)
+		pipe.ZScore(key, member)
 		return nil
 	})
 
