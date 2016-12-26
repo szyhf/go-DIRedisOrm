@@ -33,7 +33,7 @@ func (r *zsetQuerySet) Count() int64 {
 	// 重建缓存
 	if r.rebuild() {
 		// 重建成功则重新获取
-		r.Count()
+		return r.Count()
 	}
 
 	// 从用户提供的默认方法获取
@@ -198,7 +198,7 @@ func (r *zsetQuerySet) rebuild() bool {
 	if r.tryGetRebuildLock(r.Key()) {
 		defer r.tryReleaseRebuildLock(r.Key())
 		// 重建缓存
-		beego.Notice("norm.TryRebuildZSet(", r.Key(), ")")
+		beego.Notice("zsetQuerySet.rebuild(", r.Key(), ")")
 		if members, expire := r.callRebuildFunc(); len(members) > 0 {
 			r.rorm.Querier().ZAddExpire(r.Key(), members, expire)
 			return true
