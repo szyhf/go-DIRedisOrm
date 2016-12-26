@@ -14,9 +14,9 @@ type rankingQuerySet struct {
 	defaultIsMembersFunc func(string) bool
 	defaultRangeASCFunc  func(start, stop int64) []string
 	defaultRangeDESCFunc func(start, stop int64) []string
-	isDESC               bool
-	start                int64
-	stop                 int64
+
+	// 状态标识，防止重构缓存失败后陷入死循环
+	isRebuilding bool
 }
 
 func (r *rankingQuerySet) Count() uint {
@@ -143,6 +143,12 @@ func (r *rankingQuerySet) callRebuildFunc() ([]redis.Z, time.Duration) {
 }
 
 func (r *rankingQuerySet) rebuild() bool {
+	if r.isRebuilding {
+		// 防止重构缓存失败陷入死循环
+		return false
+	}
+
+	r.isRebuilding = true
 	// 获取缓存重建锁
 	if r.tryGetRebuildLock(r.Key()) {
 		defer r.tryReleaseRebuildLock(r.Key())
