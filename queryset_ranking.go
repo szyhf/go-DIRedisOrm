@@ -11,15 +11,20 @@ type rankingQuerySet struct {
 	*querySet
 	rebuildFunc          func() ([]redis.Z, time.Duration)
 	defaultCountFunc     func() uint
-	defaultIsMembersFunc func() bool
+	defaultIsMembersFunc func(string) bool
+	defaultRangeASCFunc  func(start, stop int64) []string
+	defaultRangeDESCFunc func(start, stop int64) []string
+	isDESC               bool
+	start                int64
+	stop                 int64
 }
 
 func (r *rankingQuerySet) Count() uint {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
-	count := qr.ZCardIfExist(r.Key())
-	if count >= 0 {
+	count, err := qr.ZCardIfExist(r.Key())
+	if err == nil {
 		return uint(count)
 	}
 
@@ -37,18 +42,54 @@ func (r *rankingQuerySet) IsMembers(member interface{}) bool {
 	panic("Not imp")
 }
 
+func (r rankingQuerySet) RangeASC(start, stop int64) []string {
+	panic("Not imp")
+}
+
+func (r rankingQuerySet) RangeDESC(start, stop int64) []string {
+	// 尝试直接从缓存拿
+	ro := r.rorm
+	qr := ro.Querier()
+	members, err := qr.ZRevRangeIfExist(r.Key(), start, stop)
+	if err == nil {
+		return members
+	}
+
+	// 缓存获取失败尝试重构缓存
+	if r.rebuild() {
+		return r.RangeDESC(start, stop)
+	}
+
+	// 使用用户的默认设置
+	return r.defaultRangeDESCFunc(start, stop)
+}
+
+// ============= 连贯操作 =============
+
+func (r rankingQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) RankingQuerySeter {
+	r.rebuildFunc = rebuildFunc
+	return &r
+}
+
 func (r rankingQuerySet) SetDefaultCountFunc(defaultCountFunc func() uint) RankingQuerySeter {
 	r.defaultCountFunc = defaultCountFunc
 	return &r
 }
 
-func (r rankingQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func() bool) RankingQuerySeter {
+func (r rankingQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) RankingQuerySeter {
 	r.defaultIsMembersFunc = defaultIsMembersFunc
 	return &r
 }
 
-func (r rankingQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) RankingQuerySeter {
-	r.rebuildFunc = rebuildFunc
+// 默认获取ZSet成员的方法
+func (r rankingQuerySet) SetDefaultRangeASCFunc(defaultRangeASCFunc func(start, stop int64) []string) RankingQuerySeter {
+	r.defaultRangeASCFunc = defaultRangeASCFunc
+	return &r
+}
+
+// 默认获取ZSet成员的方法
+func (r rankingQuerySet) SetDefaultRangeDESCFunc(defaultRangeDESCFunc func(start, stop int64) []string) RankingQuerySeter {
+	r.defaultRangeDESCFunc = defaultRangeDESCFunc
 	return &r
 }
 
@@ -63,7 +104,21 @@ func (r *rankingQuerySet) callDefaultIsMembersFunc() bool {
 	if r.defaultIsMembersFunc == nil {
 		return false
 	}
-	return true
+	panic("Not imp")
+}
+
+func (r *rankingQuerySet) callDefaultRangeASCFunc(start, stop int64) []string {
+	if r.defaultRangeASCFunc == nil {
+		return []string{}
+	}
+	return r.defaultRangeASCFunc(start, stop)
+}
+
+func (r *rankingQuerySet) callDefaultRangeDESCFunc(start, stop int64) []string {
+	if r.defaultRangeDESCFunc == nil {
+		return []string{}
+	}
+	return r.defaultRangeDESCFunc(start, stop)
 }
 
 func (r *rankingQuerySet) callRebuildFunc() ([]redis.Z, time.Duration) {

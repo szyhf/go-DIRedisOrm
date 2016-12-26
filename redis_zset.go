@@ -30,7 +30,7 @@ func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Dur
 
 // 使用Pipline实现的优先检查存在性的ZCard
 // 如果return -1表示查询失败。
-func (r *RedisQuerier) ZCardIfExist(key string) int64 {
+func (r *RedisQuerier) ZCardIfExist(key string) (int64, error) {
 	beego.Warn("[Redis ZCardIfExist]", key)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
@@ -41,14 +41,36 @@ func (r *RedisQuerier) ZCardIfExist(key string) int64 {
 		for _, cmd := range cmds {
 			if cmd.Err() != nil {
 				beego.Warn("norm.ZCardIfExist(", key, ") failed:", cmd.Err())
+				return 0, cmd.Err()
 			}
 		}
-		return -1
 	}
 	if cmds[0].(*redis.BoolCmd).Val() {
-		return cmds[1].(*redis.IntCmd).Val()
+		return cmds[1].(*redis.IntCmd).Val(), nil
 	} else {
-		return -1
+		return 0, ErrorKeyNotExist
+	}
+}
+
+func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string, error) {
+	beego.Warn("[Redis ZRangeRevIfExist]", key)
+	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.Exists(key)
+		pipe.ZRevRange(key, start, stop)
+		return nil
+	})
+	if err != nil {
+		for _, cmd := range cmds {
+			if cmd.Err() != nil {
+				beego.Warn("norm.ZRevRangeIfExist(", key, ") failed:", cmd.Err())
+				return nil, cmd.Err()
+			}
+		}
+	}
+	if cmds[0].(*redis.BoolCmd).Val() {
+		return cmds[1].(*redis.StringSliceCmd).Val(), nil
+	} else {
+		return nil, ErrorKeyNotExist
 	}
 }
 
