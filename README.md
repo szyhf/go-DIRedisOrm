@@ -11,7 +11,7 @@
 
 # 启动及注册
 
-```
+```golang
 option := &redis.Options{
 	Addr: "127.0.0.1:6379",
 }
@@ -28,7 +28,9 @@ rorm.RegistryRedisClient("default", RedisClient)
 
 最基础的QuerySet接口，提供一些基础方法。
 
-```
+获取QuerySet的方式由于各个扩展不尽相同，这里先不罗列了。
+
+```golang
 // 缓存穿透保护（连贯操作）
 // 表示对本次查询的key做180s的缓存穿透保护
 qs = qs.Protect(180*time.Second)
@@ -40,7 +42,8 @@ QuerySet的Ranking扩展版，支持QuerySet的所有方法。
 对ZSet的封装，主要解决有排序需求的排行榜问题。
 
 ### 基础调用
-```
+
+```golang
 // 注册过程略
 ROrmHandler = rorm.NewROrm()
 
@@ -72,7 +75,7 @@ qs = qs.SetRebuildFunc(func() ([]redis.Z, time.Duration) {
 
 根据正序，获取指定索引区间内的成员。
 
-```
+```golang
 // 如果重构缓存失败，默认获取指定区间成员的方法（可选）
 qs = qs.SetDefaultRangeASCFunc(
 			func(start, stop int64) []string {
@@ -85,7 +88,7 @@ memberInRange := qs.RangeASC(start,stop)
 
 根据正序，获取指定索引区间内的成员。
 
-```
+```golang
 // 如果重构缓存失败，默认获取指定区间成员的方法（可选）
 qs = qs.SetDefaultRangeDESCFunc(
 			func(start, stop int64) []string {
@@ -98,7 +101,7 @@ memberInRange := qs.RangeDESC(start,stop)
 
 判断member是否在当前集合中。
 
-```
+```golang
 // 设置如果重构缓存失败，判断member是否在当前集合中（可选）
 qs := SetDefaultIsMembersFunc(
 			func(member string) bool {
