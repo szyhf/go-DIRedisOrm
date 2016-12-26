@@ -5,6 +5,8 @@ import (
 
 	"time"
 
+	"strings"
+
 	"github.com/astaxie/beego"
 	"gopkg.in/redis.v5"
 )
@@ -17,6 +19,9 @@ func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Dur
 		pipe.Expire(key, expire)
 		return nil
 	})
+	if len(members) == 0 {
+		beego.Error(key)
+	}
 	if err != nil {
 		return false
 	}
@@ -54,7 +59,14 @@ func (r *RedisQuerier) ZRangeIfExist(key string, start, stop int64) ([]string, e
 		return nil, err
 	}
 	if cmds[0].(*redis.BoolCmd).Val() {
-		return cmds[1].(*redis.StringSliceCmd).Val(), nil
+		if cmds[1].Err() == nil {
+			return cmds[1].(*redis.StringSliceCmd).Val(), nil
+		} else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
+			// 数据库保护产生的空键
+			return nil, nil
+		} else {
+			return nil, cmds[1].Err()
+		}
 	} else {
 		return nil, ErrorKeyNotExist
 	}
@@ -72,7 +84,14 @@ func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string
 		return nil, err
 	}
 	if cmds[0].(*redis.BoolCmd).Val() {
-		return cmds[1].(*redis.StringSliceCmd).Val(), nil
+		if cmds[1].Err() == nil {
+			return cmds[1].(*redis.StringSliceCmd).Val(), nil
+		} else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
+			// 数据库保护产生的空键
+			return nil, nil
+		} else {
+			return nil, cmds[1].Err()
+		}
 	} else {
 		return nil, ErrorKeyNotExist
 	}
@@ -99,6 +118,9 @@ func (r *RedisQuerier) ZIsMembers(key string, member string) (bool, error) {
 			return true, nil
 		} else if cmds[1].Err() == redis.Nil {
 			// member不存在，虽然有err但属于正常情况
+			return false, nil
+		} else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
+			// 数据库保护产生的空键
 			return false, nil
 		} else {
 			// err!=redis.Nil，说明是其他异常，要返回异常

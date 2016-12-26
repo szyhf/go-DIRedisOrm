@@ -15,10 +15,10 @@ type querySet struct {
 
 // 防止频繁重建
 // expire 保护有效时间
-func (this querySet) Protect(expire time.Duration) querySet {
-	this.isProtectDB = true
-	this.protectExpire = expire
-	return this
+func (q querySet) Protect(expire time.Duration) QuerySeter {
+	q.isProtectDB = true
+	q.protectExpire = expire
+	return &q
 }
 
 func (q *querySet) Key() string {

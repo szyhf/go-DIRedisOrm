@@ -23,6 +23,9 @@ type QuerySeter interface {
 }
 
 type RankingQuerySeter interface {
+	// 保护数据库
+	Protect(expire time.Duration) RankingQuerySeter
+
 	// 重构ZSet的方法
 	SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) RankingQuerySeter
 

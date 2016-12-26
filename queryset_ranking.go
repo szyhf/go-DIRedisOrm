@@ -45,6 +45,8 @@ func (r *rankingQuerySet) IsMembers(member string) bool {
 	exist, err := qr.ZIsMembers(r.Key(), member)
 	if err == nil {
 		return exist
+	} else {
+		beego.Error(err)
 	}
 	// 重建缓存
 	if r.rebuild() {
@@ -92,6 +94,14 @@ func (r rankingQuerySet) RangeDESC(start, stop int64) []string {
 }
 
 // ============= 连贯操作 =============
+
+// 防止频繁重建
+// expire 保护有效时间
+func (r rankingQuerySet) Protect(expire time.Duration) RankingQuerySeter {
+	r.isProtectDB = true
+	r.protectExpire = expire
+	return &r
+}
 
 func (r rankingQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) RankingQuerySeter {
 	r.rebuildFunc = rebuildFunc
@@ -168,11 +178,11 @@ func (r *rankingQuerySet) rebuild() bool {
 		// 重建缓存
 		beego.Notice("norm.TryRebuildRanking(", r.Key(), ")")
 		if members, expire := r.callRebuildFunc(); len(members) > 0 {
-			// TODO: 临时处理过期时间
 			r.rorm.Querier().ZAddExpire(r.Key(), members, expire)
 			return true
 		} else {
 			// 失败了，建立缓存保护盾保护DB
+			beego.Error("Try protect", r.isProtectDB)
 			if r.isProtectDB {
 				r.tryProtectDB(r.Key())
 			}
