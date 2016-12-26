@@ -144,11 +144,13 @@ func (r *RedisQuerier) ZCard(key string) *redis.IntCmd {
 
 // 返回有序集key中，score值在min和max之间(默认包括score值等于min或max)的成员。
 func (r *RedisQuerier) ZCount(key string, min int, max int) *redis.IntCmd {
+	beego.Warn("[Redis Count]", key, min, max)
 	return r.Client.ZCount(key, fmt.Sprintf("%d", min), fmt.Sprintf("%d", max))
 }
 
 // 从ZSet中删除一个或多个成员
 func (r *RedisQuerier) ZRem(key string, members ...interface{}) *redis.IntCmd {
+	beego.Warn("[Redis ZRem]", key, members)
 	return r.Client.ZRem(key, members...)
 }
 
@@ -167,5 +169,6 @@ func (r *RedisQuerier) ZRevRange(key string, start int64, stop int64) *redis.Str
 // 返回有序集key中，成员member的score值。
 // 如果member元素不是有序集key的成员，或key不存在，返回nil。
 func (r *RedisQuerier) ZScore(key, member string) *redis.FloatCmd {
+	beego.Warn("[Redis ZScore]", key, member)
 	return r.Client.ZScore(key, member)
 }

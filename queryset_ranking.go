@@ -95,6 +95,27 @@ func (r *rankingQuerySet) RangeDESC(start, stop int64) []string {
 	return r.defaultRangeDESCFunc(start, stop)
 }
 
+// ========= 写入接口 =========
+
+func (r *rankingQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) error {
+	ro := r.rorm
+	qr := ro.Querier()
+	// 如果不增加过期方法，可能会创建一个不会过期的集合
+	qr.ZAddExpire(r.Key(), []redis.Z{redis.Z{
+		Member: member,
+		Score:  score,
+	}},
+		expire)
+	return nil
+}
+
+func (r *rankingQuerySet) Rem(member ...interface{}) error {
+	ro := r.rorm
+	qr := ro.Querier()
+	qr.ZRem(r.Key(), member...)
+	return nil
+}
+
 // ============= 连贯操作 =============
 
 // 防止频繁重建
