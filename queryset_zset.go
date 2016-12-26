@@ -10,7 +10,7 @@ import (
 type zsetQuerySet struct {
 	*querySet
 	rebuildFunc          func() ([]redis.Z, time.Duration)
-	defaultCountFunc     func() uint
+	defaultCountFunc     func() int64
 	defaultIsMembersFunc func(string) bool
 	defaultRangeASCFunc  func(start, stop int64) []string
 	defaultRangeDESCFunc func(start, stop int64) []string
@@ -21,13 +21,13 @@ type zsetQuerySet struct {
 
 // ========= 查询接口 =========
 
-func (r *zsetQuerySet) Count() uint {
+func (r *zsetQuerySet) Count() int64 {
 	// 尝试直接从缓存拿
 	ro := r.rorm
 	qr := ro.Querier()
 	count, err := qr.ZCardIfExist(r.Key())
 	if err == nil {
-		return uint(count)
+		return count
 	}
 
 	// 重建缓存
@@ -130,7 +130,7 @@ func (r zsetQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duratio
 	return &r
 }
 
-func (r zsetQuerySet) SetDefaultCountFunc(defaultCountFunc func() uint) ZSetQuerySeter {
+func (r zsetQuerySet) SetDefaultCountFunc(defaultCountFunc func() int64) ZSetQuerySeter {
 	r.defaultCountFunc = defaultCountFunc
 	return &r
 }
@@ -152,7 +152,7 @@ func (r zsetQuerySet) SetDefaultRangeDESCFunc(defaultRangeDESCFunc func(start, s
 	return &r
 }
 
-func (r *zsetQuerySet) callDefaultCountFunc() uint {
+func (r *zsetQuerySet) callDefaultCountFunc() int64 {
 	if r.defaultCountFunc == nil {
 		return 0
 	}

@@ -29,7 +29,7 @@ type ZSetQuerySeter interface {
 	// 重构ZSet的方法
 	SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) ZSetQuerySeter
 	// 默认获取ZSet数量的方法
-	SetDefaultCountFunc(defaultCountFunc func() uint) ZSetQuerySeter
+	SetDefaultCountFunc(defaultCountFunc func() int64) ZSetQuerySeter
 	// 默认判断目标是否ZSet成员的方法
 	SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) ZSetQuerySeter
 	// 默认获取ZSet某区段成员的方法
@@ -39,7 +39,7 @@ type ZSetQuerySeter interface {
 
 	// ========= 查询接口 =========
 	// 获取成员数量
-	Count() uint
+	Count() int64
 	// 按分数升序获取排名第start到stop的所有成员
 	RangeASC(start, stop int64) []string
 	// 按分数降序获取排名第start到stop的所有成员
