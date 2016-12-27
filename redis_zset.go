@@ -90,8 +90,8 @@ func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string
 }
 
 // 判定Key是否存在，如果存在则检查member是否在集合中
-func (r *RedisQuerier) ZIsMembers(key string, member string) (bool, error) {
-	beego.Notice("[Redis ZIsMembers]", key)
+func (r *RedisQuerier) ZIsMember(key string, member string) (bool, error) {
+	beego.Notice("[Redis ZIsMember]", key)
 	// 通过ZRank间接实现存在性判断
 	// ZScore返回member在ZSet中的Index
 	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {

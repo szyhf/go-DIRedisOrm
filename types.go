@@ -69,7 +69,7 @@ type ZSetQuerySeter interface {
 	// 默认获取ZSet数量的方法
 	SetDefaultCountFunc(defaultCountFunc func() int64) ZSetQuerySeter
 	// 默认判断目标是否ZSet成员的方法
-	SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) ZSetQuerySeter
+	SetDefaultIsMemberFunc(defaultIsMemberFunc func(member string) bool) ZSetQuerySeter
 	// 默认获取ZSet某区段成员的方法
 	SetDefaultRangeASCFunc(defaultRangeASC func(start, stop int64) []string) ZSetQuerySeter
 	// 默认获取ZSet某区段成员的方法
@@ -77,7 +77,7 @@ type ZSetQuerySeter interface {
 
 	// ========= 查询接口 =========
 	// 判断目标成员是否是榜单的成员（按value判断）
-	IsMembers(member string) bool
+	IsMember(member string) bool
 	// 获取成员数量
 	Count() int64
 	// 获取所有成员
@@ -99,9 +99,11 @@ type SetQuerySeter interface {
 	Protect(expire time.Duration) SetQuerySeter
 	SetRebuildFunc(rebuildFunc func() ([]interface{}, time.Duration)) SetQuerySeter
 	SetDefaultMembersFunc(defaultMembersFunc func() []string) SetQuerySeter
+	SetDefaultIsMemberFunc(defaultIsMemberFunc func(member interface{}) bool) SetQuerySeter
 
 	Count() int64
 	Members() []string
+	IsMember(member interface{}) bool
 }
 
 // 查询器接口
@@ -113,11 +115,12 @@ type Querier interface {
 	SCardIfExist(key string) (int64, error)
 	SAddExpire(key string, members []interface{}, expire time.Duration) error
 	SMembersIfExist(key string) ([]string, error)
+	SIsMemberIfExist(key string, member interface{}) (bool, error)
 
 	// ==== ZSet ====
 	ZAddExpire(key string, members []redis.Z, expire time.Duration) error
 	ZCardIfExist(key string) (int64, error)
-	ZIsMembers(key string, member string) (bool, error)
+	ZIsMember(key string, member string) (bool, error)
 	ZRangeIfExist(key string, start, stop int64) ([]string, error)
 	ZRevRangeIfExist(key string, start, stop int64) ([]string, error)
 }

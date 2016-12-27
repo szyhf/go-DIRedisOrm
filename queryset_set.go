@@ -8,10 +8,10 @@ import (
 
 type setQuerySet struct {
 	*querySet
-	rebuildFunc          func() ([]interface{}, time.Duration)
-	defaultCountFunc     func() int64
-	defaultIsMembersFunc func(string) bool
-	defaultMembersFunc   func() []string
+	rebuildFunc         func() ([]interface{}, time.Duration)
+	defaultCountFunc    func() int64
+	defaultIsMemberFunc func(interface{}) bool
+	defaultMembersFunc  func() []string
 	// 状态标识，防止重构缓存失败后陷入死循环
 	isRebuilding bool
 }
@@ -51,6 +51,20 @@ func (q *setQuerySet) Members() []string {
 	return q.callDefaultMembersFunc()
 }
 
+func (q *setQuerySet) IsMember(member interface{}) bool {
+	val, err := q.Querier().SIsMemberIfExist(q.Key(), member)
+	if err == nil {
+		return val
+	}
+
+	// rebuild cache
+	if q.rebuildingProcess(q) {
+		return q.IsMember(member)
+	}
+
+	return q.callDefaultIsMemberFunc(member)
+}
+
 // ============= 连贯操作 =============
 
 // 防止频繁重建
@@ -71,8 +85,8 @@ func (q setQuerySet) SetDefaultCountFunc(defaultCountFunc func() int64) SetQuery
 	return &q
 }
 
-func (q setQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) SetQuerySeter {
-	q.defaultIsMembersFunc = defaultIsMembersFunc
+func (q setQuerySet) SetDefaultIsMemberFunc(defaultIsMemberFunc func(member interface{}) bool) SetQuerySeter {
+	q.defaultIsMemberFunc = defaultIsMemberFunc
 	return &q
 }
 
@@ -89,11 +103,11 @@ func (q *setQuerySet) callDefaultCountFunc() int64 {
 	return q.defaultCountFunc()
 }
 
-func (q *setQuerySet) callDefaultIsMembersFunc(member string) bool {
-	if q.defaultIsMembersFunc == nil {
+func (q *setQuerySet) callDefaultIsMemberFunc(member interface{}) bool {
+	if q.defaultIsMemberFunc == nil {
 		return false
 	}
-	return q.defaultIsMembersFunc(member)
+	return q.defaultIsMemberFunc(member)
 }
 
 func (q *setQuerySet) callDefaultMembersFunc() []string {
@@ -105,7 +119,7 @@ func (q *setQuerySet) callDefaultMembersFunc() []string {
 
 func (q *setQuerySet) callRebuildFunc() ([]interface{}, time.Duration) {
 	if q.rebuildFunc == nil {
-		return nil, 0
+		return nil, -1
 	}
 	return q.rebuildFunc()
 }

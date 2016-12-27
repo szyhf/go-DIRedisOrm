@@ -3,6 +3,8 @@ package rorm
 import (
 	"time"
 
+	"reflect"
+
 	"github.com/astaxie/beego"
 )
 
@@ -99,8 +101,23 @@ func (q *stringQuerySet) Rebuilding() error {
 	return ErrorCanNotRebuild
 }
 
+func (q *stringQuerySet) callRebuildFunc() (interface{}, time.Duration) {
+	if q.rebuildFunc == nil {
+		return nil, -1
+	}
+	return q.rebuildFunc()
+}
+
 func (q *stringQuerySet) callDefaultScanFunc(val interface{}) error {
 	if q.defaultScanFunc == nil {
+		// 没有设置ScanFunc的时候尝试用RebuildFunc替代。
+		rebuildValue, _ := q.callRebuildFunc()
+		v := reflect.ValueOf(rebuildValue)
+		if v.Kind() == reflect.Ptr {
+			val = rebuildValue
+		} else {
+			val = &rebuildValue
+		}
 		return nil
 	}
 	return q.defaultScanFunc(val)

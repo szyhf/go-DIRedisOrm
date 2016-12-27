@@ -11,7 +11,7 @@ type zsetQuerySet struct {
 	*querySet
 	rebuildFunc          func() ([]redis.Z, time.Duration)
 	defaultCountFunc     func() int64
-	defaultIsMembersFunc func(string) bool
+	defaultIsMemberFunc func(string) bool
 	defaultRangeASCFunc  func(start, stop int64) []string
 	defaultRangeDESCFunc func(start, stop int64) []string
 }
@@ -35,20 +35,20 @@ func (q *zsetQuerySet) Count() int64 {
 	return q.callDefaultCountFunc()
 }
 
-func (q *zsetQuerySet) IsMembers(member string) bool {
+func (q *zsetQuerySet) IsMember(member string) bool {
 	// 尝试直接从缓存拿
-	exist, err := q.Querier().ZIsMembers(q.Key(), member)
+	exist, err := q.Querier().ZIsMember(q.Key(), member)
 	if err == nil {
 		return exist
 	}
 
 	// 重建缓存
 	if q.rebuildingProcess(q) {
-		return q.IsMembers(member)
+		return q.IsMember(member)
 	}
 
 	// 从用户提供的默认方法获取
-	return q.callDefaultIsMembersFunc(member)
+	return q.callDefaultIsMemberFunc(member)
 }
 
 func (q *zsetQuerySet) RangeASC(start, stop int64) []string {
@@ -129,8 +129,8 @@ func (q zsetQuerySet) SetDefaultCountFunc(defaultCountFunc func() int64) ZSetQue
 	return &q
 }
 
-func (q zsetQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) ZSetQuerySeter {
-	q.defaultIsMembersFunc = defaultIsMembersFunc
+func (q zsetQuerySet) SetDefaultIsMemberFunc(defaultIsMemberFunc func(member string) bool) ZSetQuerySeter {
+	q.defaultIsMemberFunc = defaultIsMemberFunc
 	return &q
 }
 
@@ -164,11 +164,11 @@ func (q *zsetQuerySet) callDefaultCountFunc() int64 {
 	return q.defaultCountFunc()
 }
 
-func (q *zsetQuerySet) callDefaultIsMembersFunc(member string) bool {
-	if q.defaultIsMembersFunc == nil {
+func (q *zsetQuerySet) callDefaultIsMemberFunc(member string) bool {
+	if q.defaultIsMemberFunc == nil {
 		return false
 	}
-	return q.defaultIsMembersFunc(member)
+	return q.defaultIsMemberFunc(member)
 }
 
 func (q *zsetQuerySet) callDefaultRangeASCFunc(start, stop int64) []string {
