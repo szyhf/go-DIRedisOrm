@@ -64,7 +64,7 @@ func (q *zsetQuerySet) RangeASC(start, stop int64) []string {
 	}
 
 	// 使用用户的默认设置
-	return q.defaultRangeASCFunc(start, stop)
+	return q.callDefaultRangeASCFunc(start, stop)
 }
 
 func (q *zsetQuerySet) RangeDESC(start, stop int64) []string {
@@ -80,7 +80,7 @@ func (q *zsetQuerySet) RangeDESC(start, stop int64) []string {
 	}
 
 	// 使用用户的默认设置
-	return q.defaultRangeDESCFunc(start, stop)
+	return q.callDefaultRangeDESCFunc(start, stop)
 }
 
 func (q *zsetQuerySet) Members() []string {

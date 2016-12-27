@@ -1,7 +1,10 @@
 package rorm // import "go.szyhf.org/di-rorm"
-import redis "gopkg.in/redis.v5"
-import "time"
-import "fmt"
+import (
+	"fmt"
+	"time"
+
+	redis "gopkg.in/redis.v5"
+)
 
 const (
 	OrderASC uint8 = iota
