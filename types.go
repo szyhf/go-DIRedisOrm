@@ -14,6 +14,8 @@ var (
 )
 
 type ROrmer interface {
+	// 构造String查询构造器
+	QueryString(key string) StringQuerySeter
 	// 构造ZSet查询构造器
 	QueryZSet(key string) ZSetQuerySeter
 	// 构造Set查询构造器
@@ -33,6 +35,25 @@ type QuerySeter interface {
 	Querier() Querier
 	// ROrmer的引用
 	ROrmer() ROrmer
+}
+
+type StringQuerySeter interface {
+	QuerySeter
+	// ========= 连贯操作接口 =========
+	// 保护数据库
+	Protect(expire time.Duration) StringQuerySeter
+	// 重构String的方法
+	SetRebuildFunc(rebuildFunc func() (interface{}, time.Duration)) StringQuerySeter
+
+	// ======== 读取接口 ========
+	// 获取键值
+	Get() string
+	// 将值写入传入实例
+	Scan(value interface{}) error
+
+	// ========= 写入接口 =========
+	// 设置值（如果为实例，则调用encoding/binary接口）
+	Set(value interface{}, expire time.Duration) error
 }
 
 type ZSetQuerySeter interface {
