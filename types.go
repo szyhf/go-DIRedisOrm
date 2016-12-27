@@ -101,9 +101,13 @@ type SetQuerySeter interface {
 	SetDefaultMembersFunc(defaultMembersFunc func() []string) SetQuerySeter
 	SetDefaultIsMemberFunc(defaultIsMemberFunc func(member interface{}) bool) SetQuerySeter
 
+	// ========== 读取接口 ==========
 	Count() int64
 	Members() []string
 	IsMember(member interface{}) bool
+
+	// ========== 写入接口 ==========
+	Rem(member ...interface{}) error
 }
 
 // 查询器接口

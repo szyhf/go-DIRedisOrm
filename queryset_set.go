@@ -65,6 +65,11 @@ func (q *setQuerySet) IsMember(member interface{}) bool {
 	return q.callDefaultIsMemberFunc(member)
 }
 
+func (q *setQuerySet) Rem(member ...interface{}) error {
+	cmd := q.Querier().SRem(q.Key(), member...)
+	return cmd.Err()
+}
+
 // ============= 连贯操作 =============
 
 // 防止频繁重建

@@ -11,7 +11,7 @@ type zsetQuerySet struct {
 	*querySet
 	rebuildFunc          func() ([]redis.Z, time.Duration)
 	defaultCountFunc     func() int64
-	defaultIsMemberFunc func(string) bool
+	defaultIsMemberFunc  func(string) bool
 	defaultRangeASCFunc  func(start, stop int64) []string
 	defaultRangeDESCFunc func(start, stop int64) []string
 }
@@ -103,10 +103,8 @@ func (q *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.
 }
 
 func (q *zsetQuerySet) Rem(member ...interface{}) error {
-	ro := q.rorm
-	qr := ro.Querier()
-	qr.ZRem(q.Key(), member...)
-	return nil
+	cmd := q.Querier().ZRem(q.Key(), member...)
+	return cmd.Err()
 }
 
 // ============= 连贯操作 =============
