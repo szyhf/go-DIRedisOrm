@@ -44,7 +44,8 @@ type StringQuerySeter interface {
 	Protect(expire time.Duration) StringQuerySeter
 	// 重构String的方法
 	SetRebuildFunc(rebuildFunc func() (interface{}, time.Duration)) StringQuerySeter
-
+	// 设置默认的扫描方法
+	SetDefaultScanFunc(scanFunc func(val interface{}) error) StringQuerySeter
 	// ======== 读取接口 ========
 	// 获取键值
 	Get() string
@@ -54,6 +55,8 @@ type StringQuerySeter interface {
 	// ========= 写入接口 =========
 	// 设置值（如果为实例，则调用encoding/binary接口）
 	Set(value interface{}, expire time.Duration) error
+	// 移除当前key
+	Del() error
 }
 
 type ZSetQuerySeter interface {
