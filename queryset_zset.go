@@ -14,93 +14,87 @@ type zsetQuerySet struct {
 	defaultIsMembersFunc func(string) bool
 	defaultRangeASCFunc  func(start, stop int64) []string
 	defaultRangeDESCFunc func(start, stop int64) []string
-
-	// 状态标识，防止重构缓存失败后陷入死循环
-	isRebuilding bool
 }
 
 // ========= 查询接口 =========
 
-func (r *zsetQuerySet) Count() int64 {
+func (q *zsetQuerySet) Count() int64 {
 	// 尝试直接从缓存拿
-	ro := r.rorm
-	qr := ro.Querier()
-	count, err := qr.ZCardIfExist(r.Key())
+	count, err := q.Querier().ZCardIfExist(q.Key())
 	if err == nil {
 		return count
 	}
 
 	// 重建缓存
-	if r.rebuild() {
+	if q.rebuildingProcess(q) {
 		// 重建成功则重新获取
-		return r.Count()
+		return q.Count()
 	}
 
 	// 从用户提供的默认方法获取
-	return r.callDefaultCountFunc()
+	return q.callDefaultCountFunc()
 }
 
-func (r *zsetQuerySet) IsMembers(member string) bool {
+func (q *zsetQuerySet) IsMembers(member string) bool {
 	// 尝试直接从缓存拿
-	ro := r.rorm
-	qr := ro.Querier()
-	exist, err := qr.ZIsMembers(r.Key(), member)
+	exist, err := q.Querier().ZIsMembers(q.Key(), member)
 	if err == nil {
 		return exist
 	}
 
 	// 重建缓存
-	if r.rebuild() {
-		return r.IsMembers(member)
+	if q.rebuildingProcess(q) {
+		return q.IsMembers(member)
 	}
 
 	// 从用户提供的默认方法获取
-	return r.callDefaultIsMembersFunc(member)
+	return q.callDefaultIsMembersFunc(member)
 }
 
-func (r *zsetQuerySet) RangeASC(start, stop int64) []string {
+func (q *zsetQuerySet) RangeASC(start, stop int64) []string {
 	// 尝试直接从缓存拿
-	ro := r.rorm
-	qr := ro.Querier()
-	members, err := qr.ZRangeIfExist(r.Key(), start, stop)
+	members, err := q.Querier().ZRangeIfExist(q.Key(), start, stop)
 	if err == nil {
 		return members
 	}
 
 	// 缓存获取失败尝试重构缓存
-	if r.rebuild() {
-		return r.RangeASC(start, stop)
+	if q.rebuildingProcess(q) {
+		return q.RangeASC(start, stop)
 	}
 
 	// 使用用户的默认设置
-	return r.defaultRangeASCFunc(start, stop)
+	return q.defaultRangeASCFunc(start, stop)
 }
 
-func (r *zsetQuerySet) RangeDESC(start, stop int64) []string {
+func (q *zsetQuerySet) RangeDESC(start, stop int64) []string {
 	// 尝试直接从缓存拿
-	ro := r.rorm
-	qr := ro.Querier()
-	members, err := qr.ZRevRangeIfExist(r.Key(), start, stop)
+	members, err := q.Querier().ZRevRangeIfExist(q.Key(), start, stop)
 	if err == nil {
 		return members
 	}
 
 	// 缓存获取失败尝试重构缓存
-	if r.rebuild() {
-		return r.RangeDESC(start, stop)
+	if q.rebuildingProcess(q) {
+		return q.RangeDESC(start, stop)
 	}
 
 	// 使用用户的默认设置
-	return r.defaultRangeDESCFunc(start, stop)
+	return q.defaultRangeDESCFunc(start, stop)
+}
+
+func (q *zsetQuerySet) Members() []string {
+	// 利用Range的负数参数指向倒数的元素的特性实现
+	return q.RangeASC(0, -1)
 }
 
 // ========= 写入接口 =========
 
-func (r *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) error {
-	ro := r.rorm
+func (q *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) error {
+	ro := q.rorm
 	qr := ro.Querier()
 	// 如果不增加过期方法，可能会创建一个不会过期的集合
-	qr.ZAddExpire(r.Key(), []redis.Z{redis.Z{
+	qr.ZAddExpire(q.Key(), []redis.Z{redis.Z{
 		Member: member,
 		Score:  score,
 	}},
@@ -108,10 +102,10 @@ func (r *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.
 	return nil
 }
 
-func (r *zsetQuerySet) Rem(member ...interface{}) error {
-	ro := r.rorm
+func (q *zsetQuerySet) Rem(member ...interface{}) error {
+	ro := q.rorm
 	qr := ro.Querier()
-	qr.ZRem(r.Key(), member...)
+	qr.ZRem(q.Key(), member...)
 	return nil
 }
 
@@ -119,95 +113,81 @@ func (r *zsetQuerySet) Rem(member ...interface{}) error {
 
 // 防止频繁重建
 // expire 保护有效时间
-func (r zsetQuerySet) Protect(expire time.Duration) ZSetQuerySeter {
-	r.isProtectDB = true
-	r.protectExpire = expire
-	return &r
+func (q zsetQuerySet) Protect(expire time.Duration) ZSetQuerySeter {
+	q.isProtectDB = true
+	q.protectExpire = expire
+	return &q
 }
 
-func (r zsetQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) ZSetQuerySeter {
-	r.rebuildFunc = rebuildFunc
-	return &r
+func (q zsetQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) ZSetQuerySeter {
+	q.rebuildFunc = rebuildFunc
+	return &q
 }
 
-func (r zsetQuerySet) SetDefaultCountFunc(defaultCountFunc func() int64) ZSetQuerySeter {
-	r.defaultCountFunc = defaultCountFunc
-	return &r
+func (q zsetQuerySet) SetDefaultCountFunc(defaultCountFunc func() int64) ZSetQuerySeter {
+	q.defaultCountFunc = defaultCountFunc
+	return &q
 }
 
-func (r zsetQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) ZSetQuerySeter {
-	r.defaultIsMembersFunc = defaultIsMembersFunc
-	return &r
-}
-
-// 默认获取ZSet成员的方法
-func (r zsetQuerySet) SetDefaultRangeASCFunc(defaultRangeASCFunc func(start, stop int64) []string) ZSetQuerySeter {
-	r.defaultRangeASCFunc = defaultRangeASCFunc
-	return &r
+func (q zsetQuerySet) SetDefaultIsMembersFunc(defaultIsMembersFunc func(member string) bool) ZSetQuerySeter {
+	q.defaultIsMembersFunc = defaultIsMembersFunc
+	return &q
 }
 
 // 默认获取ZSet成员的方法
-func (r zsetQuerySet) SetDefaultRangeDESCFunc(defaultRangeDESCFunc func(start, stop int64) []string) ZSetQuerySeter {
-	r.defaultRangeDESCFunc = defaultRangeDESCFunc
-	return &r
+func (q zsetQuerySet) SetDefaultRangeASCFunc(defaultRangeASCFunc func(start, stop int64) []string) ZSetQuerySeter {
+	q.defaultRangeASCFunc = defaultRangeASCFunc
+	return &q
 }
 
-func (r *zsetQuerySet) callDefaultCountFunc() int64 {
-	if r.defaultCountFunc == nil {
+// 默认获取ZSet成员的方法
+func (q zsetQuerySet) SetDefaultRangeDESCFunc(defaultRangeDESCFunc func(start, stop int64) []string) ZSetQuerySeter {
+	q.defaultRangeDESCFunc = defaultRangeDESCFunc
+	return &q
+}
+
+// ============= 辅助方法 =============
+
+func (q *zsetQuerySet) Rebuilding() error {
+	// 重建缓存
+	beego.Notice("zsetQuerySet.rebuild(", q.Key(), ")")
+	if members, expire := q.callRebuildFunc(); len(members) > 0 {
+		return q.rorm.Querier().ZAddExpire(q.Key(), members, expire)
+	}
+	return ErrorCanNotRebuild
+}
+
+func (q *zsetQuerySet) callDefaultCountFunc() int64 {
+	if q.defaultCountFunc == nil {
 		return 0
 	}
-	return r.defaultCountFunc()
+	return q.defaultCountFunc()
 }
 
-func (r *zsetQuerySet) callDefaultIsMembersFunc(member string) bool {
-	if r.defaultIsMembersFunc == nil {
+func (q *zsetQuerySet) callDefaultIsMembersFunc(member string) bool {
+	if q.defaultIsMembersFunc == nil {
 		return false
 	}
-	return r.defaultIsMembersFunc(member)
+	return q.defaultIsMembersFunc(member)
 }
 
-func (r *zsetQuerySet) callDefaultRangeASCFunc(start, stop int64) []string {
-	if r.defaultRangeASCFunc == nil {
+func (q *zsetQuerySet) callDefaultRangeASCFunc(start, stop int64) []string {
+	if q.defaultRangeASCFunc == nil {
 		return []string{}
 	}
-	return r.defaultRangeASCFunc(start, stop)
+	return q.defaultRangeASCFunc(start, stop)
 }
 
-func (r *zsetQuerySet) callDefaultRangeDESCFunc(start, stop int64) []string {
-	if r.defaultRangeDESCFunc == nil {
+func (q *zsetQuerySet) callDefaultRangeDESCFunc(start, stop int64) []string {
+	if q.defaultRangeDESCFunc == nil {
 		return []string{}
 	}
-	return r.defaultRangeDESCFunc(start, stop)
+	return q.defaultRangeDESCFunc(start, stop)
 }
 
-func (r *zsetQuerySet) callRebuildFunc() ([]redis.Z, time.Duration) {
-	if r.rebuildFunc == nil {
+func (q *zsetQuerySet) callRebuildFunc() ([]redis.Z, time.Duration) {
+	if q.rebuildFunc == nil {
 		return []redis.Z{}, -1
 	}
-	return r.rebuildFunc()
-}
-
-func (r *zsetQuerySet) rebuild() bool {
-	if r.isRebuilding {
-		// 防止重构缓存失败陷入死循环
-		return false
-	}
-
-	r.isRebuilding = true
-	// 获取缓存重建锁
-	if r.tryGetRebuildLock(r.Key()) {
-		defer r.tryReleaseRebuildLock(r.Key())
-		// 重建缓存
-		beego.Notice("zsetQuerySet.rebuild(", r.Key(), ")")
-		if members, expire := r.callRebuildFunc(); len(members) > 0 {
-			r.rorm.Querier().ZAddExpire(r.Key(), members, expire)
-			return true
-		} else {
-			// 失败了，建立缓存保护盾保护DB
-			if r.isProtectDB {
-				r.tryProtectDB(r.Key())
-			}
-		}
-	}
-	return false
+	return q.rebuildFunc()
 }

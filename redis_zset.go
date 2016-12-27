@@ -1,8 +1,6 @@
 package rorm
 
 import (
-	"fmt"
-
 	"time"
 
 	"strings"
@@ -143,10 +141,10 @@ func (r *RedisQuerier) ZCard(key string) *redis.IntCmd {
 }
 
 // 返回有序集key中，score值在min和max之间(默认包括score值等于min或max)的成员。
-func (r *RedisQuerier) ZCount(key string, min int, max int) *redis.IntCmd {
-	beego.Notice("[Redis Count]", key, min, max)
-	return r.Client.ZCount(key, fmt.Sprintf("%d", min), fmt.Sprintf("%d", max))
-}
+// func (r *RedisQuerier) ZCount(key string, min int, max int) *redis.IntCmd {
+// 	beego.Notice("[Redis Count]", key, min, max)
+// 	return r.Client.ZCount(key, fmt.Sprintf("%d", min), fmt.Sprintf("%d", max))
+// }
 
 // 从ZSet中删除一个或多个成员
 func (r *RedisQuerier) ZRem(key string, members ...interface{}) *redis.IntCmd {

@@ -8,6 +8,15 @@ func NewROrm() ROrmer {
 	return new(rorm).Using("default")
 }
 
+func (r *rorm) QueryString(key string) StringQuerySeter {
+	return &stringQuerySet{
+		querySet: &querySet{
+			rorm: r,
+			key:  key,
+		},
+	}
+}
+
 func (r *rorm) QueryZSet(key string) ZSetQuerySeter {
 	return &zsetQuerySet{
 		querySet: &querySet{
@@ -37,6 +46,6 @@ func (r rorm) Using(alias string) ROrmer {
 	return &r
 }
 
-func (r *rorm) Querier() *RedisQuerier {
+func (r *rorm) Querier() Querier {
 	return r.redisQuerier
 }
