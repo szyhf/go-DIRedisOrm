@@ -84,6 +84,42 @@ func (q *zsetQuerySet) Members() ([]string, error) {
 	return q.RangeASC(0, -1)
 }
 
+func (q *zsetQuerySet) RangeByScoreASC(min, max string, offset, count int64) ([]string, error) {
+	members, err := q.Querier().ZRangeByScoreIfExist(q.Key(), redis.ZRangeBy{
+		Max:    max,
+		Min:    min,
+		Offset: offset,
+		Count:  count,
+	})
+	if err == nil {
+		return members, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.RangeByScoreASC(min, max, offset, count)
+	}
+
+	return nil, ErrorCanNotRebuild
+}
+
+func (q *zsetQuerySet) RangeByScoreDESC(max, min string, offset, count int64) ([]string, error) {
+	members, err := q.Querier().ZRevRangeByScoreIfExist(q.Key(), redis.ZRangeBy{
+		Max:    max,
+		Min:    min,
+		Offset: offset,
+		Count:  count,
+	})
+	if err == nil {
+		return members, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.RangeByScoreDESC(min, max, offset, count)
+	}
+
+	return nil, ErrorCanNotRebuild
+}
+
 // ========= 写入接口 =========
 
 func (q *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) error {
