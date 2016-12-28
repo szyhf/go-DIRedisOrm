@@ -69,26 +69,18 @@ type ZSetQuerySeter interface {
 	Protect(expire time.Duration) ZSetQuerySeter
 	// 重构ZSet的方法
 	SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duration)) ZSetQuerySeter
-	// 默认获取ZSet数量的方法
-	SetDefaultCountFunc(defaultCountFunc func() int64) ZSetQuerySeter
-	// 默认判断目标是否ZSet成员的方法
-	SetDefaultIsMemberFunc(defaultIsMemberFunc func(member string) bool) ZSetQuerySeter
-	// 默认获取ZSet某区段成员的方法
-	SetDefaultRangeASCFunc(defaultRangeASC func(start, stop int64) []string) ZSetQuerySeter
-	// 默认获取ZSet某区段成员的方法
-	SetDefaultRangeDESCFunc(defaultRangeDESC func(start, stop int64) []string) ZSetQuerySeter
 
 	// ========= 查询接口 =========
 	// 判断目标成员是否是榜单的成员（按value判断）
-	IsMember(member string) bool
+	IsMember(member string) (bool, error)
 	// 获取成员数量
-	Count() int64
+	Count() (int64, error)
 	// 获取所有成员
-	Members() []string
+	Members() ([]string, error)
 	// 按分数升序获取排名第start到stop的所有成员
-	RangeASC(start, stop int64) []string
+	RangeASC(start, stop int64) ([]string, error)
 	// 按分数降序获取排名第start到stop的所有成员
-	RangeDESC(start, stop int64) []string
+	RangeDESC(start, stop int64) ([]string, error)
 
 	// ========= 写入接口 =========
 	// 向集合中增加一个成员，并设置其过期时间
