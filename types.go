@@ -31,8 +31,8 @@ type ROrmer interface {
 	QueryZSet(key string) ZSetQuerySeter
 	// 构造Set查询构造器
 	QuerySet(key string) SetQuerySeter
-	// 构造Keys查询构造器
-	QueryKeys(keyOrPattern string) KeysQuerySeter
+	// 构造Keys查询构造器（对符合pattern的keys执行批量操作）
+	QueryKeys(pattern string) KeysQuerySeter
 	// 设置使用的Redis链接
 	Using(alias string) ROrmer
 	// 当前生效的查询器
@@ -50,9 +50,11 @@ type QuerySeter interface {
 	ROrmer() ROrmer
 }
 
+// 对所有符合模式pattern的keys执行批量操作
 type KeysQuerySeter interface {
 	// 查找所有符合给定模式pattern（正则表达式）的 key 。
 	Keys() ([]string, error)
+	Del() error
 }
 
 type StringQuerySeter interface {

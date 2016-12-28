@@ -12,8 +12,9 @@ func (q *keysQuerySet) Keys() ([]string, error) {
 	return cmd.Val(), nil
 }
 
-// 移除当前key
+// 移除符合模式的所有key
 func (q *keysQuerySet) Del() error {
-	cmd := q.Querier().Del(q.Key())
+	keys, _ := q.Keys()
+	cmd := q.Querier().Del(keys...)
 	return cmd.Err()
 }
