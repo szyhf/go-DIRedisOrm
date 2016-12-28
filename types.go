@@ -47,11 +47,10 @@ type StringQuerySeter interface {
 	Protect(expire time.Duration) StringQuerySeter
 	// 重构String的方法
 	SetRebuildFunc(rebuildFunc func() (interface{}, time.Duration)) StringQuerySeter
-	// 设置默认的扫描方法
-	SetDefaultScanFunc(scanFunc func(val interface{}) error) StringQuerySeter
+
 	// ======== 读取接口 ========
 	// 获取键值
-	Get() string
+	Get() (string, error)
 	// 将值写入传入实例
 	Scan(value interface{}) error
 

@@ -3,26 +3,21 @@ package rorm
 import (
 	"time"
 
-	"reflect"
-
 	"github.com/astaxie/beego"
 )
 
 type stringQuerySet struct {
 	*querySet
 	rebuildFunc func() (interface{}, time.Duration)
-
-	defaultGetFunc  func() string
-	defaultScanFunc func(interface{}) error
 }
 
 // ======== 读取接口 ========
 
-func (q *stringQuerySet) Get() string {
+func (q *stringQuerySet) Get() (string, error) {
 	// 尝试直接从缓存获取
 	cmd := q.Querier().Get(q.Key())
 	if cmd.Err() == nil {
-		return cmd.Val()
+		return cmd.Val(), nil
 	}
 
 	// 尝试重建缓存
@@ -31,7 +26,7 @@ func (q *stringQuerySet) Get() string {
 	}
 
 	// 尝试从默认方法获取
-	return q.callDefaultGetFunc()
+	return "", ErrorCanNotRebuild
 }
 
 func (q *stringQuerySet) Scan(value interface{}) error {
@@ -45,7 +40,7 @@ func (q *stringQuerySet) Scan(value interface{}) error {
 		return q.Scan(value)
 	}
 
-	return q.defaultScanFunc(value)
+	return ErrorCanNotRebuild
 }
 
 // ========= 写入接口 =========
@@ -75,22 +70,12 @@ func (q stringQuerySet) SetRebuildFunc(rebuildFunc func() (interface{}, time.Dur
 	return &q
 }
 
-func (q stringQuerySet) SetDefaultGetFunc(getFunc func() string) StringQuerySeter {
-	q.defaultGetFunc = getFunc
-	return &q
-}
-
-func (q stringQuerySet) SetDefaultScanFunc(scanFunc func(val interface{}) error) StringQuerySeter {
-	q.defaultScanFunc = scanFunc
-	return &q
-}
-
 // ========= 辅助方法 =========
 
 func (q *stringQuerySet) Rebuilding() error {
 	// 重建缓存
 	beego.Notice("stringQuerySet.rebuild(", q.Key(), ")")
-	if value, expire := q.rebuildFunc(); value != nil {
+	if value, expire := q.callRebuildFunc(); value != nil {
 		cmd := q.rorm.Querier().Set(q.Key(), value, expire)
 		if cmd.Err() == nil {
 			return nil
@@ -106,26 +91,4 @@ func (q *stringQuerySet) callRebuildFunc() (interface{}, time.Duration) {
 		return nil, -1
 	}
 	return q.rebuildFunc()
-}
-
-func (q *stringQuerySet) callDefaultScanFunc(val interface{}) error {
-	if q.defaultScanFunc == nil {
-		// 没有设置ScanFunc的时候尝试用RebuildFunc替代。
-		rebuildValue, _ := q.callRebuildFunc()
-		v := reflect.ValueOf(rebuildValue)
-		if v.Kind() == reflect.Ptr {
-			val = rebuildValue
-		} else {
-			val = &rebuildValue
-		}
-		return nil
-	}
-	return q.defaultScanFunc(val)
-}
-
-func (q *stringQuerySet) callDefaultGetFunc() string {
-	if q.defaultGetFunc == nil {
-		return ""
-	}
-	return q.defaultGetFunc()
 }
