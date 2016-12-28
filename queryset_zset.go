@@ -31,9 +31,22 @@ func (q *zsetQuerySet) Count() (int64, error) {
 	return 0, ErrorCanNotRebuild
 }
 
+func (q *zsetQuerySet) Score(member string) (float64, error) {
+	score, err := q.Querier().ZScoreIfExist(q.Key(), member)
+	if err == nil {
+		return score, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.Score(member)
+	}
+
+	return 0, ErrorCanNotRebuild
+}
+
 func (q *zsetQuerySet) IsMember(member string) (bool, error) {
 	// 尝试直接从缓存拿
-	exist, err := q.Querier().ZIsMember(q.Key(), member)
+	exist, err := q.Querier().ZIsMemberIfExist(q.Key(), member)
 	if err == nil {
 		return exist, nil
 	}

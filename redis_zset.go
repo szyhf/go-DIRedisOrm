@@ -137,17 +137,9 @@ func (r *RedisQuerier) ZRevRangeByScoreIfExist(key string, opt redis.ZRangeBy) (
 	}
 }
 
-func (r *RedisQuerier) DoIfExist(key string, doPipe func(pipe *redis.Pipeline) error) (bool, []redis.Cmder, error) {
-	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
-		pipe.Exists(key)
-		return doPipe(pipe)
-	})
-	return cmds[0].(*redis.BoolCmd).Val(), cmds, err
-}
-
 // 判定Key是否存在，如果存在则检查member是否在集合中
-func (r *RedisQuerier) ZIsMember(key string, member string) (bool, error) {
-	beego.Notice("[Redis ZIsMember]", key)
+func (r *RedisQuerier) ZIsMemberIfExist(key string, member string) (bool, error) {
+	beego.Notice("[Redis ZIsMemberIfExist]", key)
 	// 通过ZRank间接实现存在性判断
 	// ZScore返回member在ZSet中的Index
 	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
@@ -177,6 +169,33 @@ func (r *RedisQuerier) ZIsMember(key string, member string) (bool, error) {
 		}
 	} else {
 		return false, ErrorKeyNotExist
+	}
+}
+
+func (r *RedisQuerier) ZScoreIfExist(key string, member string) (float64, error) {
+	beego.Notice("[Redis ZIsMemberIfExist]", key)
+	// 通过ZRank间接实现存在性判断
+	// ZScore返回member在ZSet中的Index
+	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.Exists(key)
+		pipe.ZScore(key, member)
+		return nil
+	})
+
+	// Pipeline默认返回的是最后一个err，所以这里的判定方式要做调整
+	if cmds[0].Err() != nil {
+		return 0, cmds[0].Err()
+	}
+	if cmds[0].(*redis.BoolCmd).Val() {
+		// 如果member不存在，则会返回error=redis.Nil
+		if cmds[1].Err() == nil {
+			// member存在
+			return cmds[1].(*redis.FloatCmd).Val(), nil
+		} else {
+			return 0, ErrorMemberNotExist
+		}
+	} else {
+		return 0, ErrorKeyNotExist
 	}
 }
 

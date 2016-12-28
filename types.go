@@ -19,8 +19,9 @@ const (
 )
 
 var (
-	ErrorKeyNotExist   = fmt.Errorf("key not exist.")
-	ErrorCanNotRebuild = fmt.Errorf("rebuild failed.")
+	ErrorKeyNotExist    = fmt.Errorf("key not exist.")
+	ErrorCanNotRebuild  = fmt.Errorf("rebuild failed.")
+	ErrorMemberNotExist = fmt.Errorf("member not exist.")
 )
 
 type ROrmer interface {
@@ -83,6 +84,8 @@ type ZSetQuerySeter interface {
 	Count() (int64, error)
 	// 获取所有成员
 	Members() ([]string, error)
+	// 获取指定成员的分数
+	Score(member string) (float64, error)
 	// 按分数升序获取排名第start到stop的所有成员
 	RangeASC(start, stop int64) ([]string, error)
 	// 按分数降序获取排名第start到stop的所有成员
@@ -135,7 +138,8 @@ type Querier interface {
 	// ==== ZSet ====
 	ZAddExpire(key string, members []redis.Z, expire time.Duration) error
 	ZCardIfExist(key string) (int64, error)
-	ZIsMember(key string, member string) (bool, error)
+	ZIsMemberIfExist(key string, member string) (bool, error)
+	ZScoreIfExist(key string, member string) (float64, error)
 	ZRangeIfExist(key string, start, stop int64) ([]string, error)
 	ZRevRangeIfExist(key string, start, stop int64) ([]string, error)
 	ZRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error)
