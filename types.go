@@ -31,6 +31,8 @@ type ROrmer interface {
 	QueryZSet(key string) ZSetQuerySeter
 	// 构造Set查询构造器
 	QuerySet(key string) SetQuerySeter
+	// 构造Keys查询构造器
+	QueryKeys(keyOrPattern string) KeysQuerySeter
 	// 设置使用的Redis链接
 	Using(alias string) ROrmer
 	// 当前生效的查询器
@@ -46,6 +48,11 @@ type QuerySeter interface {
 	Querier() Querier
 	// ROrmer的引用
 	ROrmer() ROrmer
+}
+
+type KeysQuerySeter interface {
+	// 查找所有符合给定模式pattern（正则表达式）的 key 。
+	Keys() ([]string, error)
 }
 
 type StringQuerySeter interface {
@@ -67,6 +74,8 @@ type StringQuerySeter interface {
 	Set(value interface{}, expire time.Duration) error
 	// 移除当前key
 	Del() error
+	// 增加指定的数值
+	IncrBy(incr int64) (int64, error)
 }
 
 type ZSetQuerySeter interface {
@@ -128,6 +137,9 @@ type SetQuerySeter interface {
 // 直接与Redis相连，隔离Redis与其它工具的关系
 type Querier interface {
 	redis.Cmdable
+
+	// ==== String ====
+	IncrByIfExist(key string, incr int64) (int64, error)
 
 	// ==== Set ====
 	SCardIfExist(key string) (int64, error)

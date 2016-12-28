@@ -56,6 +56,21 @@ func (q *stringQuerySet) Del() error {
 	return cmd.Err()
 }
 
+// 如果key存在，则给当前key增长指定的值
+func (q *stringQuerySet) IncrBy(incr int64) (int64, error) {
+	val, err := q.Querier().
+		IncrByIfExist(q.Key(), incr)
+	if err == nil {
+		return val, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.IncrBy(incr)
+	}
+
+	return 0, ErrorCanNotRebuild
+}
+
 // ========= 连贯操作接口 =========
 // 保护数据库
 func (q stringQuerySet) Protect(expire time.Duration) StringQuerySeter {
@@ -76,12 +91,8 @@ func (q *stringQuerySet) Rebuilding() error {
 	// 重建缓存
 	beego.Notice("stringQuerySet.rebuild(", q.Key(), ")")
 	if value, expire := q.callRebuildFunc(); value != nil {
-		cmd := q.rorm.Querier().Set(q.Key(), value, expire)
-		if cmd.Err() == nil {
-			return nil
-		} else {
-			return cmd.Err()
-		}
+		cmd := q.Querier().Set(q.Key(), value, expire)
+		return cmd.Err()
 	}
 	return ErrorCanNotRebuild
 }
