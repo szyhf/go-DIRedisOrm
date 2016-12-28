@@ -8,21 +8,16 @@ import (
 
 type setQuerySet struct {
 	*querySet
-	rebuildFunc         func() ([]interface{}, time.Duration)
-	defaultCountFunc    func() int64
-	defaultIsMemberFunc func(interface{}) bool
-	defaultMembersFunc  func() []string
-	// 状态标识，防止重构缓存失败后陷入死循环
-	isRebuilding bool
+	rebuildFunc func() ([]interface{}, time.Duration)
 }
 
 // ========= 查询接口 =========
 
-func (q *setQuerySet) Count() int64 {
+func (q *setQuerySet) Count() (int64, error) {
 	// 尝试直接从缓存拿
 	count, err := q.Querier().SCardIfExist(q.Key())
 	if err == nil {
-		return count
+		return count, nil
 	}
 
 	// 重建缓存
@@ -32,14 +27,14 @@ func (q *setQuerySet) Count() int64 {
 	}
 
 	// 从用户提供的默认方法获取
-	return q.callDefaultCountFunc()
+	return 0, ErrorCanNotRebuild
 }
 
-func (q *setQuerySet) Members() []string {
+func (q *setQuerySet) Members() ([]string, error) {
 	// 尝试直接从缓存拿
 	members, err := q.Querier().SMembersIfExist(q.Key())
 	if err == nil {
-		return members
+		return members, nil
 	}
 	// 重建缓存
 	if q.rebuildingProcess(q) {
@@ -48,13 +43,13 @@ func (q *setQuerySet) Members() []string {
 	}
 
 	// 从用户提供的默认方法获取
-	return q.callDefaultMembersFunc()
+	return nil, ErrorCanNotRebuild
 }
 
-func (q *setQuerySet) IsMember(member interface{}) bool {
+func (q *setQuerySet) IsMember(member interface{}) (bool, error) {
 	val, err := q.Querier().SIsMemberIfExist(q.Key(), member)
 	if err == nil {
-		return val
+		return val, nil
 	}
 
 	// rebuild cache
@@ -62,7 +57,7 @@ func (q *setQuerySet) IsMember(member interface{}) bool {
 		return q.IsMember(member)
 	}
 
-	return q.callDefaultIsMemberFunc(member)
+	return false, ErrorCanNotRebuild
 }
 
 func (q *setQuerySet) Rem(member ...interface{}) error {
@@ -83,43 +78,6 @@ func (q setQuerySet) Protect(expire time.Duration) SetQuerySeter {
 func (q setQuerySet) SetRebuildFunc(rebuildFunc func() ([]interface{}, time.Duration)) SetQuerySeter {
 	q.rebuildFunc = rebuildFunc
 	return &q
-}
-
-func (q setQuerySet) SetDefaultCountFunc(defaultCountFunc func() int64) SetQuerySeter {
-	q.defaultCountFunc = defaultCountFunc
-	return &q
-}
-
-func (q setQuerySet) SetDefaultIsMemberFunc(defaultIsMemberFunc func(member interface{}) bool) SetQuerySeter {
-	q.defaultIsMemberFunc = defaultIsMemberFunc
-	return &q
-}
-
-// 默认获取ZSet成员的方法
-func (q setQuerySet) SetDefaultMembersFunc(defaultMembersFunc func() []string) SetQuerySeter {
-	q.defaultMembersFunc = defaultMembersFunc
-	return &q
-}
-
-func (q *setQuerySet) callDefaultCountFunc() int64 {
-	if q.defaultCountFunc == nil {
-		return 0
-	}
-	return q.defaultCountFunc()
-}
-
-func (q *setQuerySet) callDefaultIsMemberFunc(member interface{}) bool {
-	if q.defaultIsMemberFunc == nil {
-		return false
-	}
-	return q.defaultIsMemberFunc(member)
-}
-
-func (q *setQuerySet) callDefaultMembersFunc() []string {
-	if q.defaultMembersFunc == nil {
-		return []string{}
-	}
-	return q.defaultMembersFunc()
 }
 
 func (q *setQuerySet) callRebuildFunc() ([]interface{}, time.Duration) {
