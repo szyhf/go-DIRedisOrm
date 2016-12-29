@@ -133,6 +133,32 @@ func (q *zsetQuerySet) RangeByScoreDESC(max, min string, offset, count int64) ([
 	return nil, ErrorCanNotRebuild
 }
 
+func (q *zsetQuerySet) RangeASCWithScores(start, stop int64) ([]redis.Z, error) {
+	members, err := q.Querier().ZRevRangeWithScoresIfExist(q.Key(), start, stop)
+	if err == nil {
+		return members, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.RangeASCWithScores(start, stop)
+	}
+
+	return nil, ErrorCanNotRebuild
+}
+
+func (q *zsetQuerySet) RangeDESCWithScores(start, stop int64) ([]redis.Z, error) {
+	members, err := q.Querier().ZRangeWithScoresIfExist(q.Key(), start, stop)
+	if err == nil {
+		return members, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.RangeDESCWithScores(start, stop)
+	}
+
+	return nil, ErrorCanNotRebuild
+}
+
 // ========= 写入接口 =========
 
 func (q *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) (int64, error) {

@@ -120,6 +120,54 @@ func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string
 	}
 }
 
+func (r *RedisQuerier) ZRangeWithScoresIfExist(key string, start, stop int64) ([]redis.Z, error) {
+	beego.Notice("[Redis ZRangeWithScoresIfExist]", key, start, stop)
+	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.Exists(key)
+		pipe.ZRangeWithScores(key, start, stop)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if cmds[0].(*redis.BoolCmd).Val() {
+		if cmds[1].Err() == nil {
+			return cmds[1].(*redis.ZSliceCmd).Val(), nil
+		} else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
+			// 数据库保护产生的空键
+			return nil, nil
+		} else {
+			return nil, cmds[1].Err()
+		}
+	} else {
+		return nil, ErrorKeyNotExist
+	}
+}
+
+func (r *RedisQuerier) ZRevRangeWithScoresIfExist(key string, start, stop int64) ([]redis.Z, error) {
+	beego.Notice("[Redis ZRevRangeWithScoresIfExist]", key, start, stop)
+	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.Exists(key)
+		pipe.ZRevRangeWithScores(key, start, stop)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if cmds[0].(*redis.BoolCmd).Val() {
+		if cmds[1].Err() == nil {
+			return cmds[1].(*redis.ZSliceCmd).Val(), nil
+		} else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
+			// 数据库保护产生的空键
+			return nil, nil
+		} else {
+			return nil, cmds[1].Err()
+		}
+	} else {
+		return nil, ErrorKeyNotExist
+	}
+}
+
 func (r *RedisQuerier) ZRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error) {
 	beego.Notice("[Redis ZRangeByScoreIfExist]", key, opt)
 

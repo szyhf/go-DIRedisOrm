@@ -101,6 +101,10 @@ type ZSetQuerySeter interface {
 	RangeASC(start, stop int64) ([]string, error)
 	// 按分数降序获取排名第start到stop的所有成员
 	RangeDESC(start, stop int64) ([]string, error)
+	// 按分数降序获取排名第start到stop的所有成员及成员分数
+	RangeASCWithScores(start, stop int64) ([]redis.Z, error)
+	// 按分数降序获取排名第start到stop的所有成员及成员分数
+	RangeDESCWithScores(start, stop int64) ([]redis.Z, error)
 	// 按分数升序获取指定分数区间内的成员
 	// max,min除了数字外，可取"+inf"或"-inf"表示无限大或无限小
 	// 默认情况下，区间的取值使用闭区间(小于等于或大于等于)，你也可以通过给参数前增加'('符号来使用可选的开区间(小于或大于)。
@@ -163,11 +167,17 @@ type Querier interface {
 	// ==== ZSet ====
 	ZAddExpire(key string, members []redis.Z, expire time.Duration) (int64, error)
 	ZAddExpireIfExist(key string, members []redis.Z, expire time.Duration) (int64, error)
-	ZCardIfExist(key string) (int64, error)
+
 	ZIsMemberIfExist(key string, member string) (bool, error)
+	ZCardIfExist(key string) (int64, error)
 	ZScoreIfExist(key string, member string) (float64, error)
+
 	ZRangeIfExist(key string, start, stop int64) ([]string, error)
 	ZRevRangeIfExist(key string, start, stop int64) ([]string, error)
+
+	ZRangeWithScoresIfExist(key string, start int64, stop int64) ([]redis.Z, error)
+	ZRevRangeWithScoresIfExist(key string, start, stop int64) ([]redis.Z, error)
+
 	ZRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error)
 	ZRevRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error)
 }
