@@ -65,6 +65,22 @@ func (q *setQuerySet) Rem(member ...interface{}) error {
 	return cmd.Err()
 }
 
+// ========= 写入接口 =========
+func (q *setQuerySet) AddExpire(member interface{}, expire time.Duration) (int64, error) {
+	// 如果不增加过期方法，可能会创建一个不会过期的集合
+	num, err := q.Querier().
+		SAddExpireIfExist(q.Key(), []interface{}{member}, expire)
+	if err == nil {
+		return num, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.AddExpire(member, expire)
+	}
+
+	return 0, ErrorCanNotRebuild
+}
+
 // ============= 连贯操作 =============
 
 // 防止频繁重建
@@ -91,7 +107,12 @@ func (q *setQuerySet) Rebuilding() error {
 	// 重建缓存
 	beego.Notice("setQuerySet.rebuild(", q.Key(), ")")
 	if members, expire := q.callRebuildFunc(); len(members) > 0 {
-		return q.rorm.Querier().SAddExpire(q.Key(), members, expire)
+		// 见 issue#1
+		cmd := q.Querier().Del(q.Key())
+		if cmd.Err() == nil {
+			_, err := q.Querier().SAddExpire(q.Key(), members, expire)
+			return err
+		}
 	}
 	return ErrorCanNotRebuild
 }

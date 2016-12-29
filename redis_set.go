@@ -11,15 +11,44 @@ import (
 // ========== 扩展方法 ==========
 
 // 添加一个或多个member到集合中，并设置集合的过期时间
-func (r *RedisQuerier) SAddExpire(key string, members []interface{}, expire time.Duration) error {
+func (r *RedisQuerier) SAddExpire(key string, members []interface{}, expire time.Duration) (int64, error) {
 	beego.Notice("[Redis SAddExpire]", key, members, expire)
-	_, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.SAdd(key, members...)
+		pipe.Expire(key, expire)
+		return nil
+	})
+	if err == nil {
+		return cmds[0].(*redis.IntCmd).Val(), nil
+	}
+	return 0, err
+}
+
+func (r *RedisQuerier) SAddExpireIfExist(key string, members []interface{}, expire time.Duration) (int64, error) {
+	beego.Notice("[Redis SAddExpireIfExist]", key, members, expire)
+	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.Exists(key)
 		pipe.SAdd(key, members...)
 		pipe.Expire(key, expire)
 		return nil
 	})
 
-	return err
+	if err != nil {
+		return 0, err
+	}
+
+	if cmds[0].(*redis.BoolCmd).Val() {
+		if cmds[1].Err() == nil {
+			return cmds[1].(*redis.IntCmd).Val(), nil
+		} else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
+			// 数据库保护产生的空键
+			return 0, nil
+		} else {
+			return 0, cmds[1].Err()
+		}
+	} else {
+		return 0, ErrorKeyNotExist
+	}
 }
 
 // 统计当前集合中有多少个元素

@@ -123,15 +123,25 @@ type ZSetQuerySeter interface {
 
 type SetQuerySeter interface {
 	QuerySeter
+
+	// ========= 连贯操作接口 =========
+	// 保护数据库
 	Protect(expire time.Duration) SetQuerySeter
+	// 重构ZSet的方法
 	SetRebuildFunc(rebuildFunc func() ([]interface{}, time.Duration)) SetQuerySeter
 
 	// ========== 读取接口 ==========
+	// 获取成员数量
 	Count() (int64, error)
+	// 获取所有成员
 	Members() ([]string, error)
+	// 判断目标成员是否是榜单的成员（按value判断）
 	IsMember(member interface{}) (bool, error)
 
 	// ========== 写入接口 ==========
+	// 向集合中增加一个成员，并设置其过期时间
+	AddExpire(member interface{}, expire time.Duration) (int64, error)
+	// 从集合中移除n个成员
 	Rem(member ...interface{}) error
 }
 
@@ -144,8 +154,9 @@ type Querier interface {
 	IncrByIfExist(key string, incr int64) (int64, error)
 
 	// ==== Set ====
+	SAddExpire(key string, members []interface{}, expire time.Duration) (int64, error)
+	SAddExpireIfExist(key string, members []interface{}, expire time.Duration) (int64, error)
 	SCardIfExist(key string) (int64, error)
-	SAddExpire(key string, members []interface{}, expire time.Duration) error
 	SMembersIfExist(key string) ([]string, error)
 	SIsMemberIfExist(key string, member interface{}) (bool, error)
 
