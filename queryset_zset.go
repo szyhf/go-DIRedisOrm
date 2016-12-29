@@ -115,7 +115,7 @@ func (q *zsetQuerySet) RangeByScoreASC(min, max string, offset, count int64) ([]
 	return nil, ErrorCanNotRebuild
 }
 
-func (q *zsetQuerySet) RangeByScoreDESC(max, min string, offset, count int64) ([]string, error) {
+func (q *zsetQuerySet) RangeByScoreDESC(min, max string, offset, count int64) ([]string, error) {
 	members, err := q.Querier().ZRevRangeByScoreIfExist(q.Key(), redis.ZRangeBy{
 		Max:    max,
 		Min:    min,

@@ -116,7 +116,7 @@ type ZSetQuerySeter interface {
 	// 默认情况下，区间的取值使用闭区间(小于等于或大于等于)，你也可以通过给参数前增加'('符号来使用可选的开区间(小于或大于)。
 	// 例如：ZREVRANGEBYSCORE zset 5 (1
 	// 表示：所有符合条件 5>score>=1的成员
-	RangeByScoreDESC(max, min string, offset, count int64) ([]string, error)
+	RangeByScoreDESC(min, max string, offset, count int64) ([]string, error)
 
 	// ========= 写入接口 =========
 	// 向集合中增加一个成员，并设置其过期时间
