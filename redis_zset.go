@@ -10,15 +10,46 @@ import (
 )
 
 // 使用pipline实现的带过期时间的ZAdd
-func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Duration) error {
+func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Duration) (int64, error) {
 	beego.Notice("[Redis ZAddExpire]", key, members, expire)
-	_, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.ZAdd(key, members...)
+		pipe.Expire(key, expire)
+		return nil
+	})
+	if err == nil {
+		return cmds[0].(*redis.IntCmd).Val(), nil
+	}
+
+	return 0, err
+}
+
+// 使用pipline实现的带过期时间的ZAdd（仅当key存在时添加）
+func (r *RedisQuerier) ZAddExpireIfExist(key string, members []redis.Z, expire time.Duration) (int64, error) {
+	beego.Notice("[Redis ZAddExpireIfExist]", key, members, expire)
+	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+		pipe.Exists(key)
 		pipe.ZAdd(key, members...)
 		pipe.Expire(key, expire)
 		return nil
 	})
 
-	return err
+	if err != nil {
+		return 0, err
+	}
+
+	if cmds[0].(*redis.BoolCmd).Val() {
+		if cmds[1].Err() == nil {
+			return cmds[1].(*redis.IntCmd).Val(), nil
+		} else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
+			// 数据库保护产生的空键
+			return 0, nil
+		} else {
+			return 0, cmds[1].Err()
+		}
+	} else {
+		return 0, ErrorKeyNotExist
+	}
 }
 
 // 使用Pipline实现的优先检查存在性的ZCard
@@ -33,7 +64,7 @@ func (r *RedisQuerier) ZCardIfExist(key string) (int64, error) {
 		return 0, err
 	}
 	if cmds[0].(*redis.BoolCmd).Val() {
-		return cmds[1].(*redis.IntCmd).Val(), nil
+		return cmds[1].(*redis.IntCmd).Val(), cmds[1].Err()
 	} else {
 		return 0, ErrorKeyNotExist
 	}
@@ -41,7 +72,7 @@ func (r *RedisQuerier) ZCardIfExist(key string) (int64, error) {
 
 // 判定Key是否存在，如果存在则返回指定排序区间的成员（正序）
 func (r *RedisQuerier) ZRangeIfExist(key string, start, stop int64) ([]string, error) {
-	beego.Notice("[Redis ZRangeIfExist]", key)
+	beego.Notice("[Redis ZRangeIfExist]", key, start, stop)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.ZRange(key, start, stop)
@@ -66,7 +97,7 @@ func (r *RedisQuerier) ZRangeIfExist(key string, start, stop int64) ([]string, e
 
 // 判定Key是否存在，如果存在则返回指定排序区间的成员（逆序）
 func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string, error) {
-	beego.Notice("[Redis ZRevRangeIfExist]", key)
+	beego.Notice("[Redis ZRevRangeIfExist]", key, start, stop)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.ZRevRange(key, start, stop)
@@ -90,7 +121,7 @@ func (r *RedisQuerier) ZRevRangeIfExist(key string, start, stop int64) ([]string
 }
 
 func (r *RedisQuerier) ZRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error) {
-	beego.Notice("[Redis ZRangeByScoreIfExist]", key)
+	beego.Notice("[Redis ZRangeByScoreIfExist]", key, opt)
 
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
@@ -114,7 +145,7 @@ func (r *RedisQuerier) ZRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]s
 	}
 }
 func (r *RedisQuerier) ZRevRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error) {
-	beego.Notice("[Redis ZRevRangeByScoreIfExist]", key)
+	beego.Notice("[Redis ZRevRangeByScoreIfExist]", key, opt)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.ZRevRangeByScore(key, opt)
@@ -139,7 +170,7 @@ func (r *RedisQuerier) ZRevRangeByScoreIfExist(key string, opt redis.ZRangeBy) (
 
 // 判定Key是否存在，如果存在则检查member是否在集合中
 func (r *RedisQuerier) ZIsMemberIfExist(key string, member string) (bool, error) {
-	beego.Notice("[Redis ZIsMemberIfExist]", key)
+	beego.Notice("[Redis ZIsMemberIfExist]", key, member)
 	// 通过ZRank间接实现存在性判断
 	// ZScore返回member在ZSet中的Index
 	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
@@ -173,7 +204,7 @@ func (r *RedisQuerier) ZIsMemberIfExist(key string, member string) (bool, error)
 }
 
 func (r *RedisQuerier) ZScoreIfExist(key string, member string) (float64, error) {
-	beego.Notice("[Redis ZIsMemberIfExist]", key)
+	beego.Notice("[Redis ZIsMemberIfExist]", key, member)
 	// 通过ZRank间接实现存在性判断
 	// ZScore返回member在ZSet中的Index
 	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
@@ -197,51 +228,4 @@ func (r *RedisQuerier) ZScoreIfExist(key string, member string) (float64, error)
 	} else {
 		return 0, ErrorKeyNotExist
 	}
-}
-
-// ======= 原生命令 =======
-
-// 将所有指定成员添加到键为key有序集合（sorted set）里面。
-// 添加时可以指定多个分数/成员（score/member）对。
-// 如果指定添加的成员已经是有序集合里面的成员，则会更新改成员的分数（scrore）并更新到正确的排序位置。
-func (r *RedisQuerier) ZAdd(key string, members ...redis.Z) *redis.IntCmd {
-	beego.Notice("[Redis ZAdd]", key, members)
-	return r.Client.ZAdd(key, members...)
-}
-
-// 返回key的有序集元素个数。
-func (r *RedisQuerier) ZCard(key string) *redis.IntCmd {
-	beego.Notice("[Redis ZCard]", key)
-	return r.Client.ZCard(key)
-}
-
-// 返回有序集key中，score值在min和max之间(默认包括score值等于min或max)的成员。
-// func (r *RedisQuerier) ZCount(key string, min int, max int) *redis.IntCmd {
-// 	beego.Notice("[Redis Count]", key, min, max)
-// 	return r.Client.ZCount(key, fmt.Sprintf("%d", min), fmt.Sprintf("%d", max))
-// }
-
-// 从ZSet中删除一个或多个成员
-func (r *RedisQuerier) ZRem(key string, members ...interface{}) *redis.IntCmd {
-	beego.Notice("[Redis ZRem]", key, members)
-	return r.Client.ZRem(key, members...)
-}
-
-// 返回有序集key中，指定区间内的成员。其中成员的位置按score值递减(从大到小)来排列。具有相同score值的成员按字典序排列。
-func (r *RedisQuerier) ZRange(key string, start int64, stop int64) *redis.StringSliceCmd {
-	beego.Notice("[Redis ZRange]", key, start, stop)
-	return r.Client.ZRange(key, start, stop)
-}
-
-// 返回有序集key中，指定区间内的成员。其中成员的位置按score值递减(从大到小)来排列。具有相同score值的成员按字典序的反序排列。
-func (r *RedisQuerier) ZRevRange(key string, start int64, stop int64) *redis.StringSliceCmd {
-	beego.Notice("[Redis ZRevRange]", key, start, stop)
-	return r.Client.ZRevRange(key, start, stop)
-}
-
-// 返回有序集key中，成员member的score值。
-// 如果member元素不是有序集key的成员，或key不存在，返回nil。
-func (r *RedisQuerier) ZScore(key, member string) *redis.FloatCmd {
-	beego.Notice("[Redis ZScore]", key, member)
-	return r.Client.ZScore(key, member)
 }

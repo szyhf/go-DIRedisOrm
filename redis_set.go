@@ -12,7 +12,7 @@ import (
 
 // 添加一个或多个member到集合中，并设置集合的过期时间
 func (r *RedisQuerier) SAddExpire(key string, members []interface{}, expire time.Duration) error {
-	beego.Warn("[Redis SAddExpire]", key, members, expire)
+	beego.Notice("[Redis SAddExpire]", key, members, expire)
 	_, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.SAdd(key, members...)
 		pipe.Expire(key, expire)
@@ -24,7 +24,7 @@ func (r *RedisQuerier) SAddExpire(key string, members []interface{}, expire time
 
 // 统计当前集合中有多少个元素
 func (r *RedisQuerier) SCardIfExist(key string) (int64, error) {
-	beego.Warn("[Redis SCardIfExist]", key)
+	beego.Notice("[Redis SCardIfExist]", key)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.SCard(key)
@@ -42,7 +42,7 @@ func (r *RedisQuerier) SCardIfExist(key string) (int64, error) {
 
 // 获取集合中的所有成员
 func (r *RedisQuerier) SMembersIfExist(key string) ([]string, error) {
-	beego.Warn("[Redis SMembersIfExist]", key)
+	beego.Notice("[Redis SMembersIfExist]", key)
 	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.SMembers(key)
@@ -67,7 +67,7 @@ func (r *RedisQuerier) SMembersIfExist(key string) ([]string, error) {
 
 // 确认集合中是否有成员
 func (r *RedisQuerier) SIsMemberIfExist(key string, member interface{}) (bool, error) {
-	beego.Notice("[Redis SIsMemberIfExist]", key)
+	beego.Notice("[Redis SIsMemberIfExist]", key, member)
 	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.SIsMember(key, member)
@@ -96,24 +96,4 @@ func (r *RedisQuerier) SIsMemberIfExist(key string, member interface{}) (bool, e
 	} else {
 		return false, ErrorKeyNotExist
 	}
-}
-
-// ========== 原生方法 ==========
-
-// 添加一个或多个指定的member到集合中.
-func (r *RedisQuerier) SAdd(key string, members ...interface{}) *redis.IntCmd {
-	beego.Warn("[Redis SAdd]", key, members)
-	return r.Client.SAdd(key, members...)
-}
-
-// 从集合中删除一个或多个member
-func (r *RedisQuerier) SRem(key string, members ...interface{}) *redis.IntCmd {
-	beego.Warn("[Redis SRem]", key, members)
-	return r.Client.SRem(key, members...)
-}
-
-// 获取集合中的所有成员
-func (r *RedisQuerier) SMembers(key string) *redis.StringSliceCmd {
-	beego.Warn("[Redis SMembers]", key)
-	return r.Client.SMembers(key)
 }

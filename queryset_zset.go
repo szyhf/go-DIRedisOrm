@@ -135,16 +135,21 @@ func (q *zsetQuerySet) RangeByScoreDESC(max, min string, offset, count int64) ([
 
 // ========= 写入接口 =========
 
-func (q *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) error {
-	ro := q.rorm
-	qr := ro.Querier()
+func (q *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) (int64, error) {
 	// 如果不增加过期方法，可能会创建一个不会过期的集合
-	qr.ZAddExpire(q.Key(), []redis.Z{redis.Z{
+	num, err := q.Querier().ZAddExpireIfExist(q.Key(), []redis.Z{redis.Z{
 		Member: member,
 		Score:  score,
-	}},
-		expire)
-	return nil
+	}}, expire)
+	if err == nil {
+		return num, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.AddExpire(member, score, expire)
+	}
+
+	return 0, ErrorCanNotRebuild
 }
 
 func (q *zsetQuerySet) Rem(member ...interface{}) error {
@@ -173,7 +178,13 @@ func (q *zsetQuerySet) Rebuilding() error {
 	// 重建缓存
 	beego.Notice("zsetQuerySet.rebuild(", q.Key(), ")")
 	if members, expire := q.callRebuildFunc(); len(members) > 0 {
-		return q.rorm.Querier().ZAddExpire(q.Key(), members, expire)
+		// 见 issue#1
+		cmd := q.Querier().Del(q.Key())
+		if cmd.Err() == nil {
+			_, err := q.Querier().ZAddExpire(q.Key(), members, expire)
+			return err
+		}
+		return cmd.Err()
 	}
 	return ErrorCanNotRebuild
 }

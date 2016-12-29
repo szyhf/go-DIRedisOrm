@@ -116,7 +116,7 @@ type ZSetQuerySeter interface {
 
 	// ========= 写入接口 =========
 	// 向集合中增加一个成员，并设置其过期时间
-	AddExpire(member interface{}, score float64, expire time.Duration) error
+	AddExpire(member interface{}, score float64, expire time.Duration) (int64, error)
 	// 从集合中移除n个成员
 	Rem(member ...interface{}) error
 }
@@ -150,7 +150,8 @@ type Querier interface {
 	SIsMemberIfExist(key string, member interface{}) (bool, error)
 
 	// ==== ZSet ====
-	ZAddExpire(key string, members []redis.Z, expire time.Duration) error
+	ZAddExpire(key string, members []redis.Z, expire time.Duration) (int64, error)
+	ZAddExpireIfExist(key string, members []redis.Z, expire time.Duration) (int64, error)
 	ZCardIfExist(key string) (int64, error)
 	ZIsMemberIfExist(key string, member string) (bool, error)
 	ZScoreIfExist(key string, member string) (float64, error)
