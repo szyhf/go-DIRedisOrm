@@ -26,15 +26,16 @@ func (r *RedisQuerier) SAddExpire(key string, members []interface{}, expire time
 
 func (r *RedisQuerier) SAddExpireIfExist(key string, members []interface{}, expire time.Duration) (int64, error) {
 	beego.Notice("[Redis SAddExpireIfExist]", key, members, expire)
-	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.SAdd(key, members...)
 		pipe.Expire(key, expire)
 		return nil
 	})
 
-	if err != nil {
-		return 0, err
+	// Pipeline默认返回的是最后一个err，所以这里的判定方式要做调整
+	if cmds[0].Err() != nil {
+		return 0, cmds[0].Err()
 	}
 
 	if cmds[0].(*redis.BoolCmd).Val() {
@@ -54,13 +55,14 @@ func (r *RedisQuerier) SAddExpireIfExist(key string, members []interface{}, expi
 // 统计当前集合中有多少个元素
 func (r *RedisQuerier) SCardIfExist(key string) (int64, error) {
 	beego.Notice("[Redis SCardIfExist]", key)
-	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.SCard(key)
 		return nil
 	})
-	if err != nil {
-		return 0, err
+	// Pipeline默认返回的是最后一个err，所以这里的判定方式要做调整
+	if cmds[0].Err() != nil {
+		return 0, cmds[0].Err()
 	}
 	if cmds[0].(*redis.BoolCmd).Val() {
 		return cmds[1].(*redis.IntCmd).Val(), nil
@@ -72,13 +74,14 @@ func (r *RedisQuerier) SCardIfExist(key string) (int64, error) {
 // 获取集合中的所有成员
 func (r *RedisQuerier) SMembersIfExist(key string) ([]string, error) {
 	beego.Notice("[Redis SMembersIfExist]", key)
-	cmds, err := r.ExecPipeline(func(pipe *redis.Pipeline) error {
+	cmds, _ := r.ExecPipeline(func(pipe *redis.Pipeline) error {
 		pipe.Exists(key)
 		pipe.SMembers(key)
 		return nil
 	})
-	if err != nil {
-		return nil, err
+	// Pipeline默认返回的是最后一个err，所以这里的判定方式要做调整
+	if cmds[0].Err() != nil {
+		return nil, cmds[0].Err()
 	}
 	if cmds[0].(*redis.BoolCmd).Val() {
 		if cmds[1].Err() == nil {
