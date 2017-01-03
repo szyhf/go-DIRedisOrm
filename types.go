@@ -166,8 +166,8 @@ type HashQuerySeter interface {
 	Exist(field string) (bool, error)
 
 	// ========== 写入接口 ==========
-	Set(field string, value interface{}) (int64, error)
-	MutiSet(kvMap map[string]string) (int64, error)
+	SetExpire(field string, value interface{}, expire time.Duration) (bool, error)
+	MutiSet(kvMap map[string]string) (bool, error)
 }
 
 // 查询器接口
@@ -203,9 +203,9 @@ type Querier interface {
 	ZRevRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error)
 
 	// ==== Hash ====
-	HSetExpire(key string, field string, value interface{}, expire time.Duration) (int64, error)
-	HSetExpireIfExsit(key string, field string, value interface{}, expire time.Duration) (int64, error)
+	HSetExpire(key string, field string, value interface{}, expire time.Duration) (bool, error)
+	HSetExpireIfExist(key string, field string, value interface{}, expire time.Duration) (bool, error)
 	HMSetExpire(key string, kvMap map[string]string, expire time.Duration) (bool, error)
 
-	HGetIfExsit(key string, field string) (string, error)
+	HGetIfExist(key string, field string) (string, error)
 }

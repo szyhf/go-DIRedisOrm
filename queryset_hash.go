@@ -13,7 +13,7 @@ type hashQuerySet struct {
 
 // ========= 读取接口 =========
 func (q *hashQuerySet) Get(field string) (string, error) {
-	val, err := q.Querier().HGetIfExsit(q.Key(), field)
+	val, err := q.Querier().HGetIfExist(q.Key(), field)
 	if err == nil {
 		return val, nil
 	}
@@ -33,18 +33,30 @@ func (q *hashQuerySet) Exist(field string) (bool, error) {
 }
 
 // ========== 写入接口 ==========
-func (q *hashQuerySet) Set(field string, value interface{}) (int64, error) {
-	panic("Not imp")
+func (q *hashQuerySet) SetExpire(field string, value interface{}, expire time.Duration) (bool, error) {
+	// 如果不增加过期方法，可能会创建一个不会过期的集合
+	ok, err := q.Querier().
+		HSetExpireIfExist(q.Key(), field, value, expire)
+	if err == nil {
+		return ok, nil
+	}
+
+	if q.rebuildingProcess(q) {
+		return q.SetExpire(field, value, expire)
+	}
+
+	return false, ErrorCanNotRebuild
 }
-func (q *hashQuerySet) MutiSet(kvMap map[string]string) (int64, error) {
+func (q *hashQuerySet) MutiSet(kvMap map[string]string) (bool, error) {
 	panic("Not imp")
 }
 
 // ========== 连贯操作 ==========
 
-// 重构ZSet的方法
+// 重构Hash的方法
 func (q hashQuerySet) SetRebuildFunc(rebuildFunc func() (map[string]string, time.Duration)) HashQuerySeter {
-	panic("Not imp")
+	q.rebuildFunc = rebuildFunc
+	return &q
 }
 
 func (q hashQuerySet) Protect(expire time.Duration) HashQuerySeter {
