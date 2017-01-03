@@ -8,6 +8,15 @@ func NewROrm() ROrmer {
 	return new(rorm).Using("default")
 }
 
+func (r *rorm) QueryHash(key string) HashQuerySeter {
+	return &hashQuerySet{
+		querySet: &querySet{
+			rorm: r,
+			key:  key,
+		},
+	}
+}
+
 func (r *rorm) QueryKeys(key string) KeysQuerySeter {
 	return &keysQuerySet{
 		querySet: &querySet{

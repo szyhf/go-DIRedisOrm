@@ -25,6 +25,8 @@ var (
 )
 
 type ROrmer interface {
+	// 构造Hash查询构造器
+	QueryHash(key string) HashQuerySeter
 	// 构造String查询构造器
 	QueryString(key string) StringQuerySeter
 	// 构造ZSet查询构造器
@@ -149,6 +151,25 @@ type SetQuerySeter interface {
 	Rem(member ...interface{}) error
 }
 
+type HashQuerySeter interface {
+	QuerySeter
+
+	// ========= 连贯操作接口 =========
+	// 保护数据库
+	Protect(expire time.Duration) HashQuerySeter
+	// 重构ZSet的方法
+	SetRebuildFunc(rebuildFunc func() (map[string]string, time.Duration)) HashQuerySeter
+
+	// ========= 读取接口 =========
+	Get(field string) (string, error)
+	MutiGet(field ...string) ([]string, error)
+	Exist(field string) (bool, error)
+
+	// ========== 写入接口 ==========
+	Set(field string, value interface{}) (int64, error)
+	MutiSet(kvMap map[string]string) (int64, error)
+}
+
 // 查询器接口
 // 直接与Redis相连，隔离Redis与其它工具的关系
 type Querier interface {
@@ -180,4 +201,11 @@ type Querier interface {
 
 	ZRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error)
 	ZRevRangeByScoreIfExist(key string, opt redis.ZRangeBy) ([]string, error)
+
+	// ==== Hash ====
+	HSetExpire(key string, field string, value interface{}, expire time.Duration) (int64, error)
+	HSetExpireIfExsit(key string, field string, value interface{}, expire time.Duration) (int64, error)
+	HMSetExpire(key string, kvMap map[string]string, expire time.Duration) (bool, error)
+
+	HGetIfExsit(key string, field string) (string, error)
 }
