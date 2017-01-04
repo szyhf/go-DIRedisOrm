@@ -27,9 +27,6 @@ func (r *RedisQuerier) HSetExpireIfExist(key string, field string, value interfa
 	if cmds[0].(*redis.BoolCmd).Val() {
 		if cmds[1].Err() == nil {
 			return cmds[1].(*redis.BoolCmd).Val(), nil
-			// } else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
-			// 	// 数据库保护产生的空键
-			// 	return false, nil
 		} else {
 			return false, cmds[1].Err()
 		}

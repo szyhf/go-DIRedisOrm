@@ -9,6 +9,8 @@ import (
 	"gopkg.in/redis.v5"
 )
 
+// ========== 写入操作 ==============
+
 // 使用pipline实现的带过期时间的ZAdd
 func (r *RedisQuerier) ZAddExpire(key string, members []redis.Z, expire time.Duration) (int64, error) {
 	beego.Notice("[Redis ZAddExpire]", key, members, expire)
@@ -40,9 +42,6 @@ func (r *RedisQuerier) ZAddExpireIfExist(key string, members []redis.Z, expire t
 	if cmds[0].(*redis.BoolCmd).Val() {
 		if cmds[1].Err() == nil {
 			return cmds[1].(*redis.IntCmd).Val(), nil
-			// } else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
-			// 	// 数据库保护产生的空键
-			// 	return 0, ErrorProtection
 		} else {
 			return 0, cmds[1].Err()
 		}
@@ -50,6 +49,8 @@ func (r *RedisQuerier) ZAddExpireIfExist(key string, members []redis.Z, expire t
 		return 0, ErrorKeyNotExist
 	}
 }
+
+// ========== 读取操作 ==============
 
 // 使用Pipline实现的优先检查存在性的ZCard
 func (r *RedisQuerier) ZCardIfExist(key string) (int64, error) {

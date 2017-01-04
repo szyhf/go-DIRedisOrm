@@ -41,9 +41,6 @@ func (r *RedisQuerier) SAddExpireIfExist(key string, members []interface{}, expi
 	if cmds[0].(*redis.BoolCmd).Val() {
 		if cmds[1].Err() == nil {
 			return cmds[1].(*redis.IntCmd).Val(), nil
-			// } else if strings.HasPrefix(cmds[1].Err().Error(), "WRONGTYPE") {
-			// 	// 数据库保护产生的空键
-			// 	return 0, nil
 		} else {
 			return 0, cmds[1].Err()
 		}

@@ -203,9 +203,10 @@ func (q zsetQuerySet) SetRebuildFunc(rebuildFunc func() ([]redis.Z, time.Duratio
 func (q *zsetQuerySet) Rebuilding() error {
 	// 重建缓存
 	beego.Notice("zsetQuerySet.rebuild(", q.Key(), ")")
+	// 见 issue#1，移除可能存在的保护键
+	cmd := q.Querier().Del(q.Key())
+
 	if members, expire := q.callRebuildFunc(); len(members) > 0 {
-		// 见 issue#1
-		cmd := q.Querier().Del(q.Key())
 		if cmd.Err() == nil {
 			_, err := q.Querier().ZAddExpire(q.Key(), members, expire)
 			return err
