@@ -22,6 +22,7 @@ var (
 	ErrorKeyNotExist    = fmt.Errorf("key not exist.")
 	ErrorCanNotRebuild  = fmt.Errorf("rebuild failed.")
 	ErrorMemberNotExist = fmt.Errorf("member not exist.")
+	ErrorProtection     = fmt.Errorf("key is protected.")
 )
 
 type ROrmer interface {
@@ -121,9 +122,9 @@ type ZSetQuerySeter interface {
 	RangeByScoreDESC(min, max string, offset, count int64) ([]string, error)
 
 	// ========= 写入接口 =========
-	// 向集合中增加一个成员，并设置其过期时间
+	// 向已存在的集合中增加一个成员，并设置其过期时间
 	AddExpire(member interface{}, score float64, expire time.Duration) (int64, error)
-	// 从集合中移除n个成员
+	// 从已存在的集合中移除n个成员
 	Rem(member ...interface{}) error
 }
 
