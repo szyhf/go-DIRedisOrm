@@ -163,10 +163,14 @@ func (q *zsetQuerySet) RangeDESCWithScores(start, stop int64) ([]redis.Z, error)
 
 func (q *zsetQuerySet) AddExpire(member interface{}, score float64, expire time.Duration) (int64, error) {
 	// 如果不增加过期方法，可能会创建一个不会过期的集合
-	num, err := q.Querier().ZAddExpireIfExist(q.Key(), []redis.Z{redis.Z{
-		Member: member,
-		Score:  score,
-	}}, expire)
+	num, err := q.Querier().
+		ZAddExpireIfExist(q.Key(),
+			[]redis.Z{
+				redis.Z{
+					Member: member,
+					Score:  score,
+				}},
+			expire)
 	if err == nil {
 		return num, nil
 	}

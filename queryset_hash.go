@@ -47,6 +47,12 @@ func (q *hashQuerySet) SetExpire(field string, value interface{}, expire time.Du
 
 	return false, ErrorCanNotRebuild
 }
+
+func (q *hashQuerySet) Del(field string) error {
+	cmd := q.Querier().HDel(q.Key(), field)
+	return cmd.Err()
+}
+
 func (q *hashQuerySet) MutiSet(kvMap map[string]string) (bool, error) {
 	panic("Not imp")
 }

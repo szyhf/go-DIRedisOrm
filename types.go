@@ -64,23 +64,23 @@ type StringQuerySeter interface {
 	QuerySeter
 	// ========= 连贯操作接口 =========
 	// 保护数据库
-	Protect(expire time.Duration) StringQuerySeter
+	Protect(time.Duration) StringQuerySeter
 	// 重构String的方法
-	SetRebuildFunc(rebuildFunc func() (interface{}, time.Duration)) StringQuerySeter
+	SetRebuildFunc(func() (interface{}, time.Duration)) StringQuerySeter
 
 	// ======== 读取接口 ========
 	// 获取键值
 	Get() (string, error)
 	// 将值写入传入实例
-	Scan(value interface{}) error
+	Scan(interface{}) error
 
 	// ========= 写入接口 =========
 	// 设置值（如果为实例，则调用encoding/binary接口）
-	Set(value interface{}, expire time.Duration) error
+	Set(interface{}, time.Duration) error
 	// 移除当前key
 	Del() error
 	// 增加指定的数值
-	IncrBy(incr int64) (int64, error)
+	IncrBy(int64) (int64, error)
 }
 
 type ZSetQuerySeter interface {
@@ -168,7 +168,12 @@ type HashQuerySeter interface {
 
 	// ========== 写入接口 ==========
 	SetExpire(field string, value interface{}, expire time.Duration) (bool, error)
+	Del(field string) error
 	MutiSet(kvMap map[string]string) (bool, error)
+}
+
+type ListQuerySeter interface {
+	QuerySeter
 }
 
 // 查询器接口
