@@ -41,6 +41,7 @@ func (q *querySet) ROrmer() ROrmer {
 }
 
 func (q *querySet) tryGetRebuildLock(key string) bool {
+	beego.Notice("tryGetRebuildLock:", key)
 	// 通过setNX设置锁，同设置超时，防止del失败
 	if cmd := q.Querier().SetNX(key+":mutex", "", 30*time.Second); cmd.Err() == nil {
 		return cmd.Val()
@@ -51,6 +52,7 @@ func (q *querySet) tryGetRebuildLock(key string) bool {
 }
 
 func (q *querySet) tryReleaseRebuildLock(key string) bool {
+	beego.Notice("tryReleaseRebuildLock:", key)
 	if cmd := q.Querier().Del(key + ":mutex"); cmd.Err() == nil {
 		return true
 	} else {
@@ -62,18 +64,20 @@ func (q *querySet) tryReleaseRebuildLock(key string) bool {
 
 func (q *querySet) tryProtectDB(key string) bool {
 	cmd := q.Querier().Set(key, nil, q.protectExpire)
+	beego.Notice("tryProtectDB:", key, "for", q.protectExpire, "seconds.")
 	return cmd.Err() == nil
 }
 
 func (q *querySet) rebuildingProcess(qs QuerySeter) bool {
 	if q.isRebuilding {
+		beego.Warn("Rebuilding break for dead loop.")
 		// 防止重构缓存失败陷入死循环
 		return false
 	}
 
-	q.isRebuilding = true
 	// 获取缓存重建锁
 	if q.tryGetRebuildLock(q.Key()) {
+		q.isRebuilding = true
 		defer q.tryReleaseRebuildLock(q.Key())
 		if err := qs.Rebuilding(); err != nil {
 			// 失败了，建立缓存保护盾保护DB

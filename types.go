@@ -115,7 +115,7 @@ type ZSetQuerySeter interface {
 	// 表示：所有符合条件 1<score<=5 的成员
 	RangeByScoreASC(min, max string, offset, count int64) ([]string, error)
 	// 按分数降序获取指定分数区间内的成员
-	// max,min除了数字外，可取"+inf"或"-inf"表示无限大或无限小
+	// max,min除了数字外，可取"+inf"或"-inf"表示无限大或无限小（rorm.InfinityPositive\rorm.InfinityNegative）
 	// 默认情况下，区间的取值使用闭区间(小于等于或大于等于)，你也可以通过给参数前增加'('符号来使用可选的开区间(小于或大于)。
 	// 例如：ZREVRANGEBYSCORE zset 5 (1
 	// 表示：所有符合条件 5>score>=1的成员
