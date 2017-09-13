@@ -1,4 +1,4 @@
-package rorm // import "go.szyhf.org/di-rorm"
+package rorm
 
 import redis "gopkg.in/redis.v5"
 
